@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport-fit=cover para aprovechar toda la pantalla en iPhone (notch) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>El Impostor ⚽ · Fútbol</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
+  <div class="pitch-bg" aria-hidden="true">
+    <div class="pitch-circle"></div>
+    <div class="pitch-line"></div>
+    <span class="ball b1">⚽</span>
+    <span class="ball b2">⚽</span>
+    <span class="ball b3">⚽</span>
+  </div>
+
+  <!-- Marco tipo app de celular -->
+  <main class="phone">
+
+    <!-- ============ PANTALLA 1: CONFIGURACIÓN ============ -->
+    <section class="screen is-active" id="screen-config" aria-label="Configuración">
+      <div class="brand">
+        <div class="brand-emoji">🕵️‍♂️⚽</div>
+        <h1 class="title">El Impostor</h1>
+        <p class="subtitle">Versión Fútbol</p>
+      </div>
+
+      <div class="card config-card">
+        <label class="field">
+          <span class="field-label">Cantidad de jugadores</span>
+          <div class="stepper">
+            <button type="button" class="step-btn" data-step="players" data-dir="-1" aria-label="Menos jugadores">−</button>
+            <input type="number" id="inp-players" value="5" min="2" max="20" inputmode="numeric" readonly />
+            <button type="button" class="step-btn" data-step="players" data-dir="1" aria-label="Más jugadores">+</button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Cantidad de impostores</span>
+          <div class="stepper">
+            <button type="button" class="step-btn" data-step="impostors" data-dir="-1" aria-label="Menos impostores">−</button>
+            <input type="number" id="inp-impostors" value="1" min="1" max="19" inputmode="numeric" readonly />
+            <button type="button" class="step-btn" data-step="impostors" data-dir="1" aria-label="Más impostores">+</button>
+          </div>
+        </label>
+
+        <label class="toggle-row">
+          <span class="field-label">Sonidos</span>
+          <input type="checkbox" id="inp-sound" class="toggle" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+        </label>
+
+        <p class="hint" id="config-hint"></p>
+      </div>
+
+      <button class="btn btn-primary" id="btn-generate">Generar jugador</button>
+      <button class="btn btn-ghost" id="btn-copy">Copiar lista de jugadores</button>
+    </section>
+
+    <!-- ============ PANTALLA 2: PASAR EL CELULAR ============ -->
+    <section class="screen" id="screen-handoff" aria-label="Pasar el celular">
+      <p class="counter" id="counter">Jugador 1 de 5</p>
+      <div class="card handoff-card">
+        <div class="handoff-emoji">📲</div>
+        <h2 class="handoff-title">Pasale el celu a este jugador</h2>
+        <p class="handoff-sub">Cuando lo tengas en la mano, mirá tu rol en privado.</p>
+      </div>
+      <button class="btn btn-primary" id="btn-reveal">Ver mi rol</button>
+    </section>
+
+    <!-- ============ PANTALLA 3: REVELACIÓN DEL ROL ============ -->
+    <section class="screen" id="screen-reveal" aria-label="Tu rol">
+      <p class="counter" id="counter-reveal">Jugador 1 de 5</p>
+
+      <!-- Tarjeta normal: muestra el futbolista en grande -->
+      <div class="card reveal-card reveal-player" id="reveal-player">
+        <p class="reveal-eyebrow">Tu jugador es</p>
+        <p class="player-name" id="player-name">—</p>
+        <p class="reveal-foot">Memorizalo y no lo digas en voz alta.</p>
+      </div>
+
+      <!-- Tarjeta impostor -->
+      <div class="card reveal-card reveal-impostor" id="reveal-impostor" hidden>
+        <p class="impostor-emoji">🤫</p>
+        <p class="impostor-text">Sos el impostor</p>
+        <p class="reveal-foot">Disimulá. Nadie debe darse cuenta.</p>
+      </div>
+
+      <button class="btn btn-primary" id="btn-next">Siguiente jugador</button>
+    </section>
+
+    <!-- ============ PANTALLA 4: FINAL ============ -->
+    <section class="screen" id="screen-final" aria-label="Fin del reparto">
+      <div class="card final-card">
+        <div class="final-emoji">🎉⚽</div>
+        <h2 class="final-title">Todos recibieron su rol.<br />¡Empieza el juego!</h2>
+      </div>
+      <button class="btn btn-primary" id="btn-newgame">Nueva partida</button>
+      <button class="btn btn-ghost" id="btn-back-config">Cambiar configuración</button>
+    </section>
+
+  </main>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

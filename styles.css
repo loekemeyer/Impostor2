@@ -1,0 +1,403 @@
+/* ===================================================================
+   El Impostor · Fútbol — Estilos
+   Tema oscuro moderno, mobile-first, con onda de app de iPhone.
+   =================================================================== */
+
+/* ---------- Variables de diseño ---------- */
+:root {
+  --bg:         #0a0e12;   /* fondo general */
+  --bg-2:       #0f151b;   /* fondo del "celular" */
+  --card:       #161e26;   /* tarjetas */
+  --card-2:     #1d2832;   /* tarjetas (hover/alt) */
+  --border:     #263442;
+  --text:       #f2f6fa;
+  --text-soft:  #94a3b2;
+  --accent:     #22c55e;   /* verde cancha */
+  --accent-2:   #16a34a;
+  --danger:     #ef4444;   /* impostor */
+  --danger-2:   #b91c1c;
+  --radius:     22px;
+  --radius-sm:  14px;
+  --shadow:     0 20px 60px rgba(0, 0, 0, 0.55);
+  --ease:       cubic-bezier(0.22, 1, 0.36, 1); /* easing suave tipo iOS */
+}
+
+/* ---------- Reset básico ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ===================================================================
+   Fondo decorativo de fútbol (líneas de cancha + pelotas flotantes)
+   =================================================================== */
+.pitch-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  /* degradado verde muy sutil para insinuar el césped */
+  background:
+    radial-gradient(circle at 50% -10%, rgba(34, 197, 94, 0.10), transparent 55%),
+    radial-gradient(circle at 50% 110%, rgba(34, 197, 94, 0.06), transparent 55%),
+    var(--bg);
+}
+
+/* círculo central de la cancha */
+.pitch-circle {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 70vmin; height: 70vmin;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.035);
+  border-radius: 50%;
+}
+
+/* línea de medio campo */
+.pitch-line {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* pelotas decorativas que flotan suavemente */
+.ball {
+  position: absolute;
+  font-size: 2.4rem;
+  opacity: 0.06;
+  filter: grayscale(0.2);
+  animation: float 9s ease-in-out infinite;
+}
+.ball.b1 { top: 12%; left: 12%; animation-delay: 0s; }
+.ball.b2 { top: 70%; left: 78%; animation-delay: 2.5s; font-size: 3.2rem; }
+.ball.b3 { top: 35%; left: 85%; animation-delay: 5s; font-size: 1.8rem; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-22px) rotate(20deg); }
+}
+
+/* ===================================================================
+   Marco tipo celular
+   =================================================================== */
+.phone {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100vw);
+  height: 100dvh;
+  max-height: 920px;
+  background: linear-gradient(180deg, var(--bg-2), #0b1015);
+  border-radius: 0;
+  padding: max(env(safe-area-inset-top), 26px) 24px max(env(safe-area-inset-bottom), 26px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* En pantallas grandes el "celular" se ve flotando con marco redondeado */
+@media (min-width: 480px) {
+  .phone {
+    height: min(880px, 94dvh);
+    border-radius: 42px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+}
+
+/* ===================================================================
+   Sistema de pantallas + transiciones elegantes
+   =================================================================== */
+.screen {
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+
+.screen.is-active {
+  display: flex;
+  animation: screen-in 0.5s var(--ease) both;
+}
+
+/* la pantalla que sale (clase temporal puesta por JS) */
+.screen.is-leaving {
+  display: flex;
+  animation: screen-out 0.32s var(--ease) both;
+  pointer-events: none;
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateX(34px) scale(0.98); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+@keyframes screen-out {
+  from { opacity: 1; transform: translateX(0)     scale(1); }
+  to   { opacity: 0; transform: translateX(-34px) scale(0.98); }
+}
+
+/* ===================================================================
+   Tipografía y branding
+   =================================================================== */
+.brand { text-align: center; margin-bottom: 6px; }
+.brand-emoji { font-size: 3.2rem; margin-bottom: 10px; }
+
+.title {
+  font-size: clamp(2.6rem, 11vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  background: linear-gradient(135deg, #ffffff, #b7f7cd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.subtitle {
+  margin-top: 8px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+/* ===================================================================
+   Tarjetas
+   =================================================================== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Configuración ---------- */
+.config-card { display: flex; flex-direction: column; gap: 18px; }
+
+.field { display: flex; flex-direction: column; gap: 10px; }
+.field-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  gap: 10px;
+  align-items: center;
+}
+.stepper input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 12px 0;
+  width: 100%;
+  -moz-appearance: textfield;
+}
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.step-btn {
+  height: 52px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--card-2);
+  color: var(--text);
+  font-size: 1.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease), background 0.2s;
+}
+.step-btn:active { transform: scale(0.9); background: var(--accent); color: #04130a; }
+
+/* toggle de sonidos */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+.toggle { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  width: 56px; height: 32px;
+  border-radius: 999px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.25s var(--ease);
+}
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s var(--ease);
+}
+.toggle:checked + .toggle-track { background: var(--accent); }
+.toggle:checked + .toggle-track::after { transform: translateX(24px); }
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--danger);
+  min-height: 1.2em;
+  text-align: center;
+}
+
+/* ===================================================================
+   Botones
+   =================================================================== */
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 18px 24px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease), box-shadow 0.2s, opacity 0.2s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #04130a;
+  box-shadow: 0 12px 28px rgba(34, 197, 94, 0.32);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+.btn-ghost:active { background: var(--card); }
+
+/* ===================================================================
+   Pantalla: pasar el celular
+   =================================================================== */
+.counter {
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.handoff-card { text-align: center; padding: 38px 24px; }
+.handoff-emoji { font-size: 3.6rem; margin-bottom: 14px; animation: nudge 1.8s ease-in-out infinite; }
+.handoff-title { font-size: 1.6rem; font-weight: 800; line-height: 1.15; }
+.handoff-sub { margin-top: 12px; color: var(--text-soft); font-size: 1rem; }
+
+@keyframes nudge {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* ===================================================================
+   Pantalla: revelación del rol
+   =================================================================== */
+.reveal-card {
+  text-align: center;
+  padding: 44px 22px;
+  /* animación de "flip" al aparecer, efecto carta */
+  animation: flip-in 0.6s var(--ease) both;
+}
+@keyframes flip-in {
+  from { opacity: 0; transform: rotateY(85deg) scale(0.92); }
+  to   { opacity: 1; transform: rotateY(0)     scale(1); }
+}
+
+.reveal-eyebrow {
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+/* nombre del jugador ENORME */
+.player-name {
+  font-size: clamp(2.4rem, 12vw, 4.4rem);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #ffffff, #8ef0b0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  word-break: break-word;
+}
+
+.reveal-foot { margin-top: 18px; color: var(--text-soft); font-size: 0.95rem; }
+
+/* tarjeta impostor en rojo */
+.reveal-impostor {
+  background: linear-gradient(160deg, #2a1416, #1a0d0e);
+  border-color: var(--danger-2);
+  box-shadow: 0 14px 40px rgba(239, 68, 68, 0.22);
+}
+.impostor-emoji { font-size: 3.4rem; margin-bottom: 10px; }
+.impostor-text {
+  font-size: clamp(2.4rem, 11vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--danger);
+  text-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+}
+
+/* ===================================================================
+   Pantalla final
+   =================================================================== */
+.final-card { text-align: center; padding: 44px 24px; }
+.final-emoji { font-size: 3.8rem; margin-bottom: 16px; animation: pop 0.6s var(--ease) both; }
+.final-title { font-size: 1.7rem; font-weight: 800; line-height: 1.25; }
+
+@keyframes pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  70%  { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* mensaje flotante de "copiado" */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(env(safe-area-inset-bottom), 30px);
+  transform: translateX(-50%) translateY(20px);
+  background: var(--accent);
+  color: #04130a;
+  font-weight: 700;
+  padding: 12px 22px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+  z-index: 10;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* respeta a quienes prefieren menos animaciones */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
