@@ -28,7 +28,26 @@ const FUTBOLISTAS = [
   "Nicolás Otamendi", "Éver Banega", "Marcelo Gallardo", "Juan Sebastián Verón", "Pablo Aimar",
   "Ariel Ortega", "Andrés D'Alessandro", "Darío Benedetto", "Lisandro López", "Cristian Pavón",
   "Lucas Pratto", "Ignacio Scocco", "Franco Armani", "Sergio Romero", "Maxi Rodríguez",
-  "Ezequiel Lavezzi", "Pity Martínez", "Rodrigo De Paul", "Giovani Lo Celso", "Leandro Paredes"
+  "Ezequiel Lavezzi", "Pity Martínez", "Rodrigo De Paul", "Giovani Lo Celso", "Leandro Paredes",
+
+  // Ídolos de Boca Juniors
+  "Guillermo Barros Schelotto", "Roberto Abbondanzieri", "Sebastián Battaglia", "Rolando Schiavi", "Hugo Ibarra",
+  "Fernando Gago", "Nicolás Burdisso", "Marcelo Delgado", "Eduardo Salvio", "Sebastián Villa",
+  "Agustín Orion", "Ramón Ábila",
+
+  // Ídolos de River Plate
+  "Enzo Francescoli", "Hernán Crespo", "Javier Saviola", "Marcelo Salas", "Ramón Díaz",
+  "Fernando Cavenaghi", "Matías Almeyda", "Leonardo Ponzio", "Manuel Lanzini", "Ignacio Fernández",
+  "Juan Fernando Quintero", "Enzo Pérez", "Marcelo Barovero",
+
+  // Cracks internacionales 2010-2024
+  "Kevin De Bruyne", "Sergio Busquets", "Gerard Piqué", "David Villa", "Fernando Torres",
+  "Iker Casillas", "Manuel Neuer", "Thomas Müller", "Philipp Lahm", "Bastian Schweinsteiger",
+  "Mesut Özil", "Arjen Robben", "Franck Ribéry", "Zlatan Ibrahimović", "Andrea Pirlo",
+  "Francesco Totti", "Steven Gerrard", "Frank Lampard", "Eden Hazard", "Edinson Cavani",
+  "Radamel Falcao", "James Rodríguez", "Sadio Mané", "Virgil van Dijk", "Gareth Bale",
+  "Paul Pogba", "Vinícius Júnior", "Pedri", "Jude Bellingham", "Harry Kane",
+  "Son Heung-min", "Dani Alves", "Thiago Silva", "David Silva"
 ];
 
 /* ---------- Estado de la partida ---------- */
