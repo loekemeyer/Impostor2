@@ -14,6 +14,9 @@
 
 "use strict";
 
+/* Versión de la app (fuente única de verdad). */
+const APP_VERSION = "1.3.0";
+
 /* ---------- Lista inicial de jugadores famosos ---------- */
 const FUTBOLISTAS = [
   "Messi", "Cristiano Ronaldo", "Neymar", "Mbappé", "Haaland",
@@ -353,6 +356,10 @@ document.getElementById("btn-back-config").addEventListener("click", () => {
   mostrarPantalla("config");
   sonar("click");
 });
+
+/* Muestra la versión y la cantidad de jugadores cargados */
+document.getElementById("app-version").textContent =
+  `v${APP_VERSION} · ${FUTBOLISTAS.length} jugadores`;
 
 /* Validación inicial al cargar */
 validarConfig();
