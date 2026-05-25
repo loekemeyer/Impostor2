@@ -357,9 +357,10 @@ document.getElementById("btn-back-config").addEventListener("click", () => {
   sonar("click");
 });
 
-/* Muestra la versión y la cantidad de jugadores cargados */
-document.getElementById("app-version").textContent =
-  `v${APP_VERSION} · ${FUTBOLISTAS.length} jugadores`;
+/* Muestra la versión y la cantidad de jugadores cargados en todas las etiquetas */
+document.querySelectorAll(".version").forEach((el) => {
+  el.textContent = `v${APP_VERSION} · ${FUTBOLISTAS.length} jugadores`;
+});
 
 /* Validación inicial al cargar */
 validarConfig();
