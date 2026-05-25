@@ -21,7 +21,14 @@ const FUTBOLISTAS = [
   "Di María", "Julián Álvarez", "Dibu Martínez", "Maradona", "Pelé",
   "Zidane", "Ronaldinho", "Kaká", "Beckham", "Rooney",
   "Xavi", "Iniesta", "Ramos", "Buffon", "Benzema",
-  "Griezmann", "Tévez", "Riquelme", "Palermo", "Lautaro Martínez"
+  "Griezmann", "Tévez", "Riquelme", "Palermo", "Lautaro Martínez",
+
+  // Fútbol argentino 2010-2020 (selección + liga local)
+  "Sergio Agüero", "Gonzalo Higuaín", "Paulo Dybala", "Mauro Icardi", "Javier Mascherano",
+  "Nicolás Otamendi", "Éver Banega", "Marcelo Gallardo", "Juan Sebastián Verón", "Pablo Aimar",
+  "Ariel Ortega", "Andrés D'Alessandro", "Darío Benedetto", "Lisandro López", "Cristian Pavón",
+  "Lucas Pratto", "Ignacio Scocco", "Franco Armani", "Sergio Romero", "Maxi Rodríguez",
+  "Ezequiel Lavezzi", "Pity Martínez", "Rodrigo De Paul", "Giovani Lo Celso", "Leandro Paredes"
 ];
 
 /* ---------- Estado de la partida ---------- */
