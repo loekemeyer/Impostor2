@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0a0e12" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>El Impostor ⚽ · Fútbol</title>
+  <title>El Impostor 🕵️‍♂️ · Fútbol o Mixto</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -26,12 +26,20 @@
     <!-- ============ PANTALLA 1: CONFIGURACIÓN ============ -->
     <section class="screen is-active" id="screen-config" aria-label="Configuración">
       <div class="brand">
-        <div class="brand-emoji">🕵️‍♂️⚽</div>
+        <div class="brand-emoji">🕵️‍♂️</div>
         <h1 class="title">El Impostor</h1>
-        <p class="subtitle">Versión Fútbol</p>
+        <p class="subtitle" id="app-subtitle">Cultura general 🇦🇷</p>
       </div>
 
       <div class="card config-card">
+        <div class="field">
+          <span class="field-label">Modo de juego</span>
+          <div class="segmented" role="tablist" aria-label="Modo de juego">
+            <button type="button" class="seg-btn" role="tab" data-modo="hombres">Hombres ⚽</button>
+            <button type="button" class="seg-btn" role="tab" data-modo="mixto">Mixto 🎉</button>
+          </div>
+        </div>
+
         <label class="field">
           <span class="field-label">Cantidad de jugadores</span>
           <div class="stepper">
@@ -82,7 +90,7 @@
 
       <!-- Tarjeta normal: muestra el futbolista en grande -->
       <div class="card reveal-card reveal-player" id="reveal-player">
-        <p class="reveal-eyebrow">Tu jugador es</p>
+        <p class="reveal-eyebrow" id="reveal-eyebrow">Tu palabra es</p>
         <p class="player-name" id="player-name">—</p>
         <p class="reveal-foot">Memorizalo y no lo digas en voz alta.</p>
       </div>

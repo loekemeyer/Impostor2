@@ -1,23 +1,27 @@
 /* ===================================================================
-   El Impostor · Fútbol — Lógica del juego (JavaScript vanilla)
+   El Impostor — Lógica del juego (JavaScript vanilla)
    ===================================================================
    Flujo:
-   1. Configuración: cantidad de jugadores e impostores.
-   2. "Generar jugador": elige UN futbolista al azar y asigna en secreto
-      qué participantes son impostores.
+   1. Configuración: modo de juego, cantidad de jugadores e impostores.
+   2. "Generar jugador": elige UNA palabra al azar (según el modo) y asigna
+      en secreto qué participantes son impostores.
    3. Se pasa el celular de a uno. Cada participante toca "Ver mi rol":
-        - Impostor  -> "Sos el impostor" (NO ve al jugador).
-        - Normal    -> ve al futbolista (el MISMO para toda la ronda).
+        - Impostor  -> "Sos el impostor" (NO ve la palabra).
+        - Normal    -> ve la palabra (la MISMA para toda la ronda).
    4. Al terminar -> pantalla final.
-   5. "Nueva partida": mismo grupo, futbolista DISTINTO, nuevos impostores.
+   5. "Nueva partida": mismo grupo, palabra DISTINTA, nuevos impostores.
+
+   Modos de juego:
+     - "hombres": futbolistas famosos (la versión clásica de fútbol).
+     - "mixto":   cultura general argentina, divertida, para grupos mixtos.
    =================================================================== */
 
 "use strict";
 
 /* Versión de la app (fuente única de verdad). */
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 
-/* ---------- Lista inicial de jugadores famosos ---------- */
+/* ---------- Modo HOMBRES: jugadores de fútbol famosos ---------- */
 const FUTBOLISTAS = [
   "Messi", "Cristiano Ronaldo", "Neymar", "Mbappé", "Haaland",
   "Modric", "Kroos", "Salah", "Lewandowski", "Suárez",
@@ -53,15 +57,73 @@ const FUTBOLISTAS = [
   "Son Heung-min", "Dani Alves", "Thiago Silva", "David Silva"
 ];
 
+/* ---------- Modo MIXTO: cultura general argentina (50 palabras) ----------
+   Cosas conocidas y divertidas para jugar en grupo mixto: comidas, lugares,
+   íconos, música y costumbres bien argentas. Fáciles de disimular. */
+const MIXTO = [
+  // Comida y bebida
+  "Mate", "Asado", "Empanadas", "Milanesa", "Choripán",
+  "Dulce de leche", "Alfajor", "Fernet", "Facturas", "Locro",
+  "Provoleta", "Medialunas", "Malbec",
+
+  // Lugares
+  "Obelisco", "Bariloche", "Cataratas del Iguazú", "La Bombonera", "Caminito",
+  "Mar del Plata", "Ushuaia", "Cordillera de los Andes", "Glaciar Perito Moreno", "Casa Rosada",
+
+  // Íconos y personajes
+  "Maradona", "Messi", "Carlos Gardel", "Mercedes Sosa", "Charly García",
+  "Gustavo Cerati", "Papa Francisco", "Mafalda", "Ricardo Darín", "Susana Giménez",
+  "Mirtha Legrand", "Marcelo Tinelli",
+
+  // Música y baile
+  "Tango", "Cumbia", "Cuarteto", "Rock nacional", "Folclore",
+
+  // Costumbres y cotidiano
+  "Colectivo", "Siesta", "Feria americana", "Kiosco", "Truco",
+  "Che", "Yerba", "Vermú", "Selección Argentina", "Gauchito Gil"
+];
+
+/* ---------- Configuración de los modos de juego ----------
+   Cada modo define su lista de palabras y los textos que se muestran. */
+const MODOS = {
+  hombres: {
+    etiqueta:  "Hombres ⚽",
+    subtitulo: "Versión Fútbol",
+    eyebrow:   "Tu jugador es",
+    copiar:    "Copiar lista de jugadores",
+    unidad:    "jugadores",
+    lista:     FUTBOLISTAS
+  },
+  mixto: {
+    etiqueta:  "Mixto 🎉",
+    subtitulo: "Cultura general 🇦🇷",
+    eyebrow:   "Tu palabra es",
+    copiar:    "Copiar lista de palabras",
+    unidad:    "palabras",
+    lista:     MIXTO
+  }
+};
+
 /* ---------- Estado de la partida ---------- */
 const estado = {
+  modo: "mixto",           // "hombres" | "mixto" (arranca en mixto para jugar en grupo)
   totalJugadores: 5,
   totalImpostores: 1,
-  futbolista: null,        // el jugador elegido para toda la ronda
+  palabra: null,           // la palabra/jugador elegido para toda la ronda
   rolesImpostor: [],       // array de booleanos: true = ese participante es impostor
   jugadorActual: 0,        // índice 0-based del participante con el celu
   sonido: true
 };
+
+/** Devuelve la configuración del modo activo. */
+function modoActual() {
+  return MODOS[estado.modo];
+}
+
+/** Devuelve la lista de palabras del modo activo. */
+function listaActual() {
+  return modoActual().lista;
+}
 
 /* ===================================================================
    Utilidades
@@ -73,14 +135,15 @@ function aleatorio(max) {
 }
 
 /**
- * Elige un futbolista al azar de la lista, evitando repetir el anterior
- * (para que "Nueva partida" siempre dé uno distinto cuando se pueda).
+ * Elige una palabra al azar de la lista del modo activo, evitando repetir
+ * la anterior (para que "Nueva partida" siempre dé una distinta cuando se pueda).
  */
-function elegirFutbolista(anterior) {
+function elegirPalabra(anterior) {
+  const lista = listaActual();
   let elegido;
   do {
-    elegido = FUTBOLISTAS[aleatorio(FUTBOLISTAS.length)];
-  } while (elegido === anterior && FUTBOLISTAS.length > 1);
+    elegido = lista[aleatorio(lista.length)];
+  } while (elegido === anterior && lista.length > 1);
   return elegido;
 }
 
@@ -174,6 +237,11 @@ const counterReveal = document.getElementById("counter-reveal");
 const cardPlayer   = document.getElementById("reveal-player");
 const cardImpostor = document.getElementById("reveal-impostor");
 const playerName   = document.getElementById("player-name");
+const revealEyebrow = document.getElementById("reveal-eyebrow");
+
+const subtitle   = document.getElementById("app-subtitle");
+const btnCopy    = document.getElementById("btn-copy");
+const segButtons = document.querySelectorAll(".seg-btn");
 
 /* ===================================================================
    Configuración: steppers + / −
@@ -218,6 +286,39 @@ inpSound.addEventListener("change", () => {
 });
 
 /* ===================================================================
+   Selector de modo de juego (Hombres / Mixto)
+   =================================================================== */
+segButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (estado.modo === btn.dataset.modo) return;
+    estado.modo = btn.dataset.modo;
+    actualizarModo();
+    sonar("click");
+  });
+});
+
+/**
+ * Refresca todos los textos que dependen del modo activo:
+ * botones del selector, subtítulo, botón de copiar y las etiquetas de versión.
+ */
+function actualizarModo() {
+  const modo = modoActual();
+
+  // marca visualmente el botón seleccionado
+  segButtons.forEach((btn) => {
+    btn.classList.toggle("is-selected", btn.dataset.modo === estado.modo);
+    btn.setAttribute("aria-selected", btn.dataset.modo === estado.modo ? "true" : "false");
+  });
+
+  if (subtitle) subtitle.textContent = modo.subtitulo;
+  if (btnCopy)  btnCopy.textContent = modo.copiar;
+
+  document.querySelectorAll(".version").forEach((el) => {
+    el.textContent = `v${APP_VERSION} · ${modo.lista.length} ${modo.unidad}`;
+  });
+}
+
+/* ===================================================================
    Inicio de partida
    =================================================================== */
 function iniciarPartida() {
@@ -226,7 +327,7 @@ function iniciarPartida() {
   estado.totalJugadores = parseInt(inpPlayers.value, 10);
   estado.totalImpostores = parseInt(inpImpostors.value, 10);
   estado.sonido = inpSound.checked;
-  estado.futbolista = elegirFutbolista(estado.futbolista);
+  estado.palabra = elegirPalabra(estado.palabra);
   estado.rolesImpostor = asignarImpostores(estado.totalJugadores, estado.totalImpostores);
   estado.jugadorActual = 0;
 
@@ -258,7 +359,8 @@ function revelarRol() {
   } else {
     cardImpostor.hidden = true;
     cardPlayer.hidden = false;
-    playerName.textContent = estado.futbolista;
+    if (revealEyebrow) revealEyebrow.textContent = modoActual().eyebrow;
+    playerName.textContent = estado.palabra;
     cardPlayer.style.animation = "none";
     void cardPlayer.offsetWidth;
     cardPlayer.style.animation = "";
@@ -286,10 +388,10 @@ function siguienteJugador() {
 }
 
 /* ===================================================================
-   Nueva partida (mismo grupo, futbolista distinto)
+   Nueva partida (mismo grupo, palabra distinta)
    =================================================================== */
 function nuevaPartida() {
-  estado.futbolista = elegirFutbolista(estado.futbolista);
+  estado.palabra = elegirPalabra(estado.palabra);
   estado.rolesImpostor = asignarImpostores(estado.totalJugadores, estado.totalImpostores);
   estado.jugadorActual = 0;
 
@@ -302,7 +404,7 @@ function nuevaPartida() {
    Copiar lista de jugadores al portapapeles
    =================================================================== */
 function copiarLista() {
-  const texto = FUTBOLISTAS.join(", ");
+  const texto = listaActual().join(", ");
 
   const exito = () => {
     mostrarToast("¡Lista copiada!");
@@ -357,10 +459,8 @@ document.getElementById("btn-back-config").addEventListener("click", () => {
   sonar("click");
 });
 
-/* Muestra la versión y la cantidad de jugadores cargados en todas las etiquetas */
-document.querySelectorAll(".version").forEach((el) => {
-  el.textContent = `v${APP_VERSION} · ${FUTBOLISTAS.length} jugadores`;
-});
+/* Aplica el modo inicial (subtítulo, selector, botón de copiar y versión). */
+actualizarModo();
 
 /* Validación inicial al cargar */
 validarConfig();
