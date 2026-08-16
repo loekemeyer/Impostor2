@@ -19,7 +19,7 @@
 "use strict";
 
 /* Versión de la app (fuente única de verdad). */
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 
 /* ---------- Modo HOMBRES: jugadores de fútbol famosos ---------- */
 const FUTBOLISTAS = [
@@ -200,10 +200,12 @@ function sonar(tipo) {
    Manejo de pantallas (con transición elegante)
    =================================================================== */
 const pantallas = {
-  config:  document.getElementById("screen-config"),
-  handoff: document.getElementById("screen-handoff"),
-  reveal:  document.getElementById("screen-reveal"),
-  final:   document.getElementById("screen-final")
+  config:       document.getElementById("screen-config"),
+  handoff:      document.getElementById("screen-handoff"),
+  reveal:       document.getElementById("screen-reveal"),
+  final:        document.getElementById("screen-final"),
+  clockConfig:  document.getElementById("screen-clock-config"),
+  clock:        document.getElementById("screen-clock")
 };
 
 /** Muestra una pantalla y anima la salida de la anterior. */
@@ -228,6 +230,7 @@ function mostrarPantalla(nombre) {
    =================================================================== */
 const inpPlayers   = document.getElementById("inp-players");
 const inpImpostors = document.getElementById("inp-impostors");
+const inpMinutes   = document.getElementById("inp-minutes");
 const inpSound     = document.getElementById("inp-sound");
 const configHint   = document.getElementById("config-hint");
 
@@ -241,16 +244,17 @@ const revealEyebrow = document.getElementById("reveal-eyebrow");
 
 const subtitle   = document.getElementById("app-subtitle");
 const btnCopy    = document.getElementById("btn-copy");
-const segButtons = document.querySelectorAll(".seg-btn");
+const segButtons = document.querySelectorAll(".seg-btn[data-modo]");
 
 /* ===================================================================
    Configuración: steppers + / −
    =================================================================== */
 document.querySelectorAll(".step-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    const campo = btn.dataset.step;          // "players" | "impostors"
+    const campo = btn.dataset.step;          // "players" | "impostors" | "minutes"
     const dir = parseInt(btn.dataset.dir, 10); // 1 | -1
-    const input = campo === "players" ? inpPlayers : inpImpostors;
+    const inputs = { players: inpPlayers, impostors: inpImpostors, minutes: inpMinutes };
+    const input = inputs[campo];
 
     let valor = parseInt(input.value, 10) + dir;
     const min = parseInt(input.min, 10);
@@ -258,7 +262,7 @@ document.querySelectorAll(".step-btn").forEach((btn) => {
     valor = Math.max(min, Math.min(max, valor));
     input.value = valor;
 
-    validarConfig();
+    if (campo !== "minutes") validarConfig();
     sonar("click");
   });
 });
@@ -464,3 +468,161 @@ actualizarModo();
 
 /* Validación inicial al cargar */
 validarConfig();
+
+/* ===================================================================
+   RELOJ DE AJEDREZ (modo extra)
+   -------------------------------------------------------------------
+   Dos jugadores, un celular. Se elige cuántos minutos tiene cada uno.
+   Cada mitad de la pantalla es el reloj de un jugador; al tocar tu
+   mitad, tu reloj se detiene y arranca el del rival (como un reloj de
+   ajedrez de verdad). El que se queda sin tiempo, pierde.
+   =================================================================== */
+const reloj = {
+  minutos: 5,
+  restanteTop: 0,      // milisegundos que le quedan al jugador de arriba
+  restanteBottom: 0,   // milisegundos que le quedan al jugador de abajo
+  activo: null,        // "top" | "bottom" | null (nadie corriendo todavía)
+  pausado: false,
+  terminado: false,
+  ultimoTick: 0,       // marca de tiempo del último cálculo
+  intervalo: null
+};
+
+/* Referencias del DOM del reloj */
+const inpMinutesEl = inpMinutes;
+const clockTop     = document.getElementById("clock-top");
+const clockBottom  = document.getElementById("clock-bottom");
+const timeTop      = document.getElementById("time-top");
+const timeBottom   = document.getElementById("time-bottom");
+const btnClockPause = document.getElementById("clock-pause");
+
+/** Formatea milisegundos como m:ss (nunca negativo). */
+function formatearTiempo(ms) {
+  if (ms < 0) ms = 0;
+  const totalSeg = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSeg / 60);
+  const s = totalSeg % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Refresca los números y el estado visual de cada mitad. */
+function actualizarRelojUI() {
+  timeTop.textContent = formatearTiempo(reloj.restanteTop);
+  timeBottom.textContent = formatearTiempo(reloj.restanteBottom);
+
+  const corriendo = reloj.activo && !reloj.pausado && !reloj.terminado;
+  clockTop.classList.toggle("is-active", corriendo && reloj.activo === "top");
+  clockBottom.classList.toggle("is-active", corriendo && reloj.activo === "bottom");
+
+  clockTop.classList.toggle("is-low", reloj.restanteTop > 0 && reloj.restanteTop <= 10000);
+  clockBottom.classList.toggle("is-low", reloj.restanteBottom > 0 && reloj.restanteBottom <= 10000);
+
+  clockTop.classList.toggle("is-flag", reloj.terminado && reloj.restanteTop <= 0);
+  clockBottom.classList.toggle("is-flag", reloj.terminado && reloj.restanteBottom <= 0);
+
+  btnClockPause.textContent = reloj.pausado ? "▶" : "⏸";
+}
+
+/** Descuenta el tiempo transcurrido al jugador que está corriendo. */
+function tickReloj() {
+  if (reloj.pausado || reloj.terminado || !reloj.activo) return;
+
+  const ahora = Date.now();
+  const dt = ahora - reloj.ultimoTick;
+  reloj.ultimoTick = ahora;
+
+  if (reloj.activo === "top") reloj.restanteTop -= dt;
+  else                        reloj.restanteBottom -= dt;
+
+  if (reloj.restanteTop <= 0 || reloj.restanteBottom <= 0) {
+    reloj.restanteTop = Math.max(0, reloj.restanteTop);
+    reloj.restanteBottom = Math.max(0, reloj.restanteBottom);
+    reloj.terminado = true;
+    reloj.activo = null;
+    sonar("impostor");
+  }
+  actualizarRelojUI();
+}
+
+/** Deja los dos relojes en el tiempo elegido y frena todo. */
+function reiniciarReloj() {
+  const ms = reloj.minutos * 60 * 1000;
+  reloj.restanteTop = ms;
+  reloj.restanteBottom = ms;
+  reloj.activo = null;
+  reloj.pausado = false;
+  reloj.terminado = false;
+  actualizarRelojUI();
+}
+
+/** Arranca el reloj desde la pantalla de configuración. */
+function iniciarReloj() {
+  reloj.minutos = parseInt(inpMinutesEl.value, 10);
+  reiniciarReloj();
+  if (!reloj.intervalo) reloj.intervalo = setInterval(tickReloj, 100);
+  mostrarPantalla("clock");
+}
+
+/**
+ * Al tocar una mitad: ese jugador terminó su jugada, así que su reloj
+ * se detiene y arranca el del rival.
+ */
+function tocarMitad(mitad) {
+  if (reloj.terminado) return;
+  const rival = mitad === "top" ? "bottom" : "top";
+  reloj.pausado = false;
+  reloj.activo = rival;
+  reloj.ultimoTick = Date.now();
+  actualizarRelojUI();
+  sonar("click");
+}
+
+/** Pausa o reanuda la partida. */
+function togglePausaReloj() {
+  if (reloj.terminado || !reloj.activo) return;
+  reloj.pausado = !reloj.pausado;
+  if (!reloj.pausado) reloj.ultimoTick = Date.now();
+  actualizarRelojUI();
+  sonar("click");
+}
+
+/** Sale del reloj y detiene el intervalo. */
+function salirReloj() {
+  if (reloj.intervalo) {
+    clearInterval(reloj.intervalo);
+    reloj.intervalo = null;
+  }
+  mostrarPantalla("clockConfig");
+  sonar("click");
+}
+
+/* Botón de la pantalla principal que abre la config del reloj */
+document.getElementById("btn-open-clock").addEventListener("click", () => {
+  mostrarPantalla("clockConfig");
+  sonar("click");
+});
+
+/* Presets rápidos de minutos (1', 3', 5', 10') */
+document.querySelectorAll(".clock-presets .seg-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    inpMinutesEl.value = btn.dataset.preset;
+    sonar("click");
+  });
+});
+
+/* Botones de la config del reloj */
+document.getElementById("btn-clock-start").addEventListener("click", iniciarReloj);
+document.getElementById("btn-clock-back").addEventListener("click", () => {
+  mostrarPantalla("config");
+  sonar("click");
+});
+
+/* Zonas tocables y controles del reloj en juego */
+clockTop.addEventListener("click", () => tocarMitad("top"));
+clockBottom.addEventListener("click", () => tocarMitad("bottom"));
+btnClockPause.addEventListener("click", togglePausaReloj);
+document.getElementById("clock-reset").addEventListener("click", () => {
+  reiniciarReloj();
+  sonar("click");
+});
+document.getElementById("clock-exit").addEventListener("click", salirReloj);

@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>El Impostor 🕵️‍♂️ · Fútbol o Mixto</title>
-  <link rel="stylesheet" href="styles.css?v=1.4.0" />
+  <link rel="stylesheet" href="styles.css?v=1.5.0" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -69,6 +69,7 @@
 
       <button class="btn btn-primary" id="btn-generate">Generar jugador</button>
       <button class="btn btn-ghost" id="btn-copy">Copiar lista de jugadores</button>
+      <button class="btn btn-ghost" id="btn-open-clock">♟️ Reloj de ajedrez</button>
 
       <p class="version" id="app-version">v0.0.0</p>
     </section>
@@ -117,8 +118,64 @@
       <p class="version">v0.0.0</p>
     </section>
 
+    <!-- ============ PANTALLA 5: CONFIG DEL RELOJ DE AJEDREZ ============ -->
+    <section class="screen" id="screen-clock-config" aria-label="Configurar reloj de ajedrez">
+      <div class="brand">
+        <div class="brand-emoji">♟️</div>
+        <h1 class="title">Reloj</h1>
+        <p class="subtitle">Reloj de ajedrez</p>
+      </div>
+
+      <div class="card config-card">
+        <label class="field">
+          <span class="field-label">Minutos por jugador</span>
+          <div class="stepper">
+            <button type="button" class="step-btn" data-step="minutes" data-dir="-1" aria-label="Menos minutos">−</button>
+            <input type="number" id="inp-minutes" value="5" min="1" max="60" inputmode="numeric" readonly />
+            <button type="button" class="step-btn" data-step="minutes" data-dir="1" aria-label="Más minutos">+</button>
+          </div>
+        </label>
+
+        <div class="field">
+          <span class="field-label">Rápidos</span>
+          <div class="segmented clock-presets" role="group" aria-label="Minutos rápidos">
+            <button type="button" class="seg-btn" data-preset="1">1'</button>
+            <button type="button" class="seg-btn" data-preset="3">3'</button>
+            <button type="button" class="seg-btn" data-preset="5">5'</button>
+            <button type="button" class="seg-btn" data-preset="10">10'</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-clock-start">Empezar</button>
+      <button class="btn btn-ghost" id="btn-clock-back">Volver</button>
+    </section>
+
+    <!-- ============ PANTALLA 6: RELOJ DE AJEDREZ EN JUEGO ============ -->
+    <section class="screen" id="screen-clock" aria-label="Reloj de ajedrez">
+      <div class="clock-wrap">
+        <!-- mitad superior: rotada 180° para el jugador de enfrente -->
+        <button type="button" class="clock-half clock-top" id="clock-top">
+          <span class="clock-time" id="time-top">5:00</span>
+          <span class="clock-tap">Tocá para pasar el turno</span>
+        </button>
+
+        <div class="clock-controls">
+          <button type="button" class="clock-ctrl" id="clock-pause" aria-label="Pausar / reanudar">⏸</button>
+          <button type="button" class="clock-ctrl" id="clock-reset" aria-label="Reiniciar">↺</button>
+          <button type="button" class="clock-ctrl" id="clock-exit" aria-label="Salir">✕</button>
+        </div>
+
+        <!-- mitad inferior: jugador de este lado -->
+        <button type="button" class="clock-half clock-bottom" id="clock-bottom">
+          <span class="clock-time" id="time-bottom">5:00</span>
+          <span class="clock-tap">Tocá para pasar el turno</span>
+        </button>
+      </div>
+    </section>
+
   </main>
 
-  <script src="script.js?v=1.4.0" defer></script>
+  <script src="script.js?v=1.5.0" defer></script>
 </body>
 </html>
