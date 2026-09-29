@@ -15,8 +15,10 @@ hacer sin figurar en la agenda de alguien.
    contexto. Queda `done=false` hasta que se cierre (punto 4). Si la sesión termina sin
    cerrar, la tarea queda en la agenda: ése es el objetivo.
 3. **Excepción del dueño:** Thomas Loekemeyer NO usa Planify. Sus pedidos se cargan en el
-   Planify de **Tomás Beviglia (employee_id 20)** con el nombre antepuesto por **`Th `**
-   (ej. `Th Fecha estimada de entrega por zona`).
+   Planify de **quien corresponda según el área del pedido** con el nombre antepuesto por **`Th `**
+   (ej. `Th Fecha estimada de entrega por zona`); lo transversal va a **`Tareas T`**, que son
+   tareas del **employee_id 3 (Thomas Loekemeyer)**.
+   ⚠ **NUNCA al employee_id 20**: ése es **Tomás Beviglia** (corregido el 29/09/2026, pedido de Thomas).
 
 **Dónde:** proyecto Supabase de Gestión Virgilio `hrxfctzncixxqmpfhskv`, schema `planify`.
 Empleados activos con Planify (`planify.employees`): Marianela Becker **38**, Luis Rial Otero
