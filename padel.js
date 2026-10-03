@@ -45,6 +45,7 @@
   const CLAVE_PREFS   = "padel-config";    // localStorage: últimos nombres y reglas
   const ESPERA_MS     = 4000;              // sin "ack" en este tiempo, el punto no llegó
   const REINTENTO_MS  = 3000;              // reintento de conexión
+  const ESPERA_RED_MS = 10000;             // sin respuesta del servidor o del tablero en este tiempo: avisa y reintenta
   const PREFIJO       = "impostor2-padel-"; // id del tablero en PeerJS: prefijo + código
 
   pantallas.padelConfig = document.getElementById("screen-padel-config");
@@ -75,7 +76,7 @@
     reintento: null,
     conexion: "off",        // servidor de PeerJS: "off" | "conectando" | "ok" | "error"
     tableroOnline: false,   // (control) conectado directo con el tablero
-    sinTablero: false,      // (control) el servidor dijo que no hay tablero con ese código
+    sinTablero: false,      // (control) false | "codigo" (no existe) | "responde" (no contesta)
     controles: { a: 0, b: 0 },
     pendiente: null,        // (control) { eid, tipo } esperando ack
     pendienteTimer: null,
@@ -189,6 +190,13 @@
     const id = esTablero ? PREFIJO + P.id : `${PREFIJO}${P.id}-${nuevoId()}`;
     const peer = new Peer(id, esTablero ? { debug: 0, token: P.token } : { debug: 0 });
     P.peer = peer;
+    setTimeout(() => {
+      // el servidor no contestó: se avisa y se reintenta de cero
+      if (P.peer !== peer || peer.open || peer.destroyed) return;
+      P.conexion = "error";
+      actualizarConexion();
+      programarReintento();
+    }, ESPERA_RED_MS);
 
     peer.on("open", () => {
       if (P.peer !== peer) return;
@@ -213,7 +221,7 @@
       if (tipo === "peer-unavailable") {
         // (control) no hay ningún tablero abierto con ese código
         P.tableroOnline = false;
-        P.sinTablero = true;
+        P.sinTablero = "codigo";
         actualizarConexion();
         programarReintento();
         return;
@@ -272,7 +280,14 @@
     }
     const conn = P.peer.connect(PREFIJO + P.id, { reliable: true });
     P.conn = conn;
+    // el tablero figura pero no contesta (p. ej. su pantalla está apagada o en otra pestaña)
+    const espera = setTimeout(() => {
+      if (P.conn !== conn || conn.open) return;
+      caida();
+      try { conn.close(); } catch (e) { /* ya cerrada */ }
+    }, ESPERA_RED_MS);
     conn.on("open", () => {
+      clearTimeout(espera);
       if (P.conn !== conn) return;
       P.tableroOnline = true;
       P.sinTablero = false;
@@ -283,14 +298,15 @@
       if (P.conn !== conn || !d || d.t !== "estado") return;
       alRecibir("estado", d);
     });
-    const caida = () => {
+    function caida() {
+      clearTimeout(espera);
       if (P.conn !== conn) return;
       P.conn = null;
       P.tableroOnline = false;
-      P.sinTablero = true;   // el tablero se cerró o se cortó
+      P.sinTablero = "responde";   // el tablero se cerró, se cortó o no contesta
       actualizarConexion();
       programarReintento();
-    };
+    }
     conn.on("close", caida);
     conn.on("error", caida);
   }
@@ -661,9 +677,14 @@
     let txt = "";
     let clase = "";
     if (buscando) {
-      if (P.conexion === "error") { txt = "Sin conexión a internet"; clase = "is-bad"; }
-      else if (P.recibido) { txt = `✓ Partido ${codigoLindo(P.id)} encontrado`; clase = "is-ok"; }
-      else if (P.sinTablero) { txt = "No hay ningún tablero abierto con ese código"; clase = "is-bad"; }
+      if (P.recibido) { txt = `✓ Partido ${codigoLindo(P.id)} encontrado`; clase = "is-ok"; }
+      else if (P.conexion === "error") { txt = "Sin conexión con el servidor. Reintentando…"; clase = "is-bad"; }
+      else if (P.sinTablero === "codigo") { txt = "No hay ningún tablero abierto con ese código"; clase = "is-bad"; }
+      else if (P.sinTablero === "responde") {
+        txt = "El tablero no responde: tiene que estar abierto y en pantalla en otro celular. Reintentando…";
+        clase = "is-bad";
+      }
+      else if (P.conexion !== "ok") txt = "Conectando…";
       else txt = "Buscando el tablero…";
     }
     estadoEl.textContent = txt;
@@ -776,7 +797,8 @@
     let txt = "Conectando…";
     if (listo) txt = "● Conectado al tablero";
     else if (P.conexion === "error") txt = "○ Sin conexión";
-    else if (P.sinTablero) txt = "○ El tablero no está abierto";
+    else if (P.sinTablero === "codigo") txt = "○ El tablero no está abierto";
+    else if (P.sinTablero === "responde") txt = "○ El tablero no responde";
     estadoEl.textContent = txt;
     estadoEl.classList.toggle("is-ok", listo);
     estadoEl.classList.toggle("is-bad", !listo && (P.conexion === "error" || P.sinTablero));

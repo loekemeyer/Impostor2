@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>El Impostor 🕵️‍♂️ · Fútbol, Mixto o Número</title>
-  <link rel="stylesheet" href="styles.css?v=1.10.0" />
+  <link rel="stylesheet" href="styles.css?v=1.10.1" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -261,7 +261,8 @@
         <button type="button" class="padel-half team-a" id="padel-half-a">
           <span class="padel-name" id="padel-name-a">Equipo A</span>
           <span class="padel-pts" id="padel-pts-a">0</span>
-          <span class="padel-meta">Games <b id="padel-games-a">0</b> · Sets <b id="padel-sets-a">0</b></span>
+          <span class="padel-games"><span class="padel-games-lbl">Games</span><b id="padel-games-a">0</b></span>
+          <span class="padel-meta">Sets <b id="padel-sets-a">0</b></span>
         </button>
 
         <div class="padel-band">
@@ -279,7 +280,8 @@
         <button type="button" class="padel-half team-b" id="padel-half-b">
           <span class="padel-name" id="padel-name-b">Equipo B</span>
           <span class="padel-pts" id="padel-pts-b">0</span>
-          <span class="padel-meta">Games <b id="padel-games-b">0</b> · Sets <b id="padel-sets-b">0</b></span>
+          <span class="padel-games"><span class="padel-games-lbl">Games</span><b id="padel-games-b">0</b></span>
+          <span class="padel-meta">Sets <b id="padel-sets-b">0</b></span>
         </button>
 
         <!-- fin de set (¿seguir o terminar?) y partido terminado -->
@@ -305,6 +307,7 @@
         <p class="reveal-eyebrow">Código del partido</p>
         <p class="padel-codigo" id="padel-codigo">000 000</p>
         <p class="handoff-sub">En el otro celu: 🎾 Pádel → <b>Unirme con código</b></p>
+        <p class="padel-aviso">Dejá el tablero en pantalla: si cambiás de app o de pestaña, los otros celulares no se pueden conectar.</p>
       </div>
       <p class="padel-o">o pasale a cada equipo su link / QR</p>
       <div class="padel-qrs">
@@ -388,8 +391,8 @@
 
   </main>
 
-  <script src="script.js?v=1.10.0" defer></script>
-  <script src="padel-reglas.js?v=1.10.0" defer></script>
-  <script src="padel.js?v=1.10.0" defer></script>
+  <script src="script.js?v=1.10.1" defer></script>
+  <script src="padel-reglas.js?v=1.10.1" defer></script>
+  <script src="padel.js?v=1.10.1" defer></script>
 </body>
 </html>

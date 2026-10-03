@@ -732,16 +732,53 @@ body {
 }
 .team-a .padel-name { color: var(--team-a); }
 .team-b .padel-name { color: var(--team-b); }
+/* Tamaños según el ancho Y el alto de la pantalla, así los puntos y los
+   games entran en la mitad de cada equipo también en celulares bajos.
+   Puntos ≈ 17% del alto; games ≈ 10% (bien grandes, pero menos que los puntos). */
 .padel-pts {
-  font-size: clamp(5rem, 30vw, 9rem);
+  font-size: clamp(3rem, min(30vw, 17vh), 9rem);
+  font-size: clamp(3rem, min(30vw, 17dvh), 9rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   min-height: 1em;
 }
+.padel-games {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 18px 2px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--border);
+}
+.team-a .padel-games { border-color: rgba(34, 197, 94, 0.45); }
+.team-b .padel-games { border-color: rgba(56, 189, 248, 0.45); }
+.padel-games-lbl {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.padel-games b {
+  font-size: clamp(1.8rem, min(18vw, 10vh), 5.5rem);
+  font-size: clamp(1.8rem, min(18vw, 10dvh), 5.5rem);
+  font-weight: 900;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
 .padel-meta { color: var(--text-soft); font-weight: 600; font-size: 0.95rem; }
 .padel-meta b { color: var(--text); font-size: 1.15rem; }
+/* celular acostado: menos aire para que entren puntos y games */
+@media (max-height: 500px) {
+  .padel-half { gap: 1px; }
+  .padel-name { font-size: 0.8rem; }
+  .padel-meta { font-size: 0.8rem; }
+  .padel-meta b { font-size: 0.95rem; }
+}
 
 /* franja del medio: historial de sets + controles */
 .padel-band {
@@ -851,6 +888,7 @@ body {
 }
 .padel-codigo-card .handoff-sub { margin-top: 8px; font-size: 0.95rem; }
 .padel-o { text-align: center; color: var(--text-soft); font-size: 0.9rem; font-weight: 600; }
+.padel-aviso { margin-top: 8px; color: #fbbf24; font-size: 0.8rem; font-weight: 600; line-height: 1.35; }
 
 /* ---------- Unirme con código ---------- */
 .padel-codigo-inp {
