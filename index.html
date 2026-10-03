@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>El Impostor 🕵️‍♂️ · Fútbol, Mixto o Número</title>
-  <link rel="stylesheet" href="styles.css?v=1.7.1" />
+  <link rel="stylesheet" href="styles.css?v=1.8.0" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -251,7 +251,8 @@
 
       <button class="btn btn-primary" id="btn-padel-continuar" hidden>Continuar partido</button>
       <button class="btn btn-primary" id="btn-padel-empezar">Empezar partido</button>
-      <button class="btn btn-ghost" id="btn-padel-volver">Volver</button>
+      <button class="btn btn-ghost" id="btn-padel-unirme">📲 Unirme con código</button>
+      <button type="button" class="link-btn" id="btn-padel-volver">Volver</button>
     </section>
 
     <!-- ============ PÁDEL · TABLERO (tocar una mitad = punto de ese equipo) ============ -->
@@ -298,11 +299,14 @@
     </section>
 
     <!-- ============ PÁDEL · LINKS PARA MARCAR DESDE OTRO CELULAR ============ -->
-    <section class="screen" id="screen-padel-links" aria-label="Links para marcar">
-      <div class="brand">
-        <h2 class="handoff-title">Marcar desde otro celu</h2>
-        <p class="handoff-sub">Pasale a cada equipo su link (o que escanee el QR). Desde ahí suma puntos para su equipo.</p>
+    <section class="screen" id="screen-padel-links" aria-label="Conectar celulares">
+      <h2 class="handoff-title padel-links-titulo">Conectar celulares</h2>
+      <div class="card padel-codigo-card">
+        <p class="reveal-eyebrow">Código del partido</p>
+        <p class="padel-codigo" id="padel-codigo">000 000</p>
+        <p class="handoff-sub">En el otro celu: 🎾 Pádel → <b>Unirme con código</b></p>
       </div>
+      <p class="padel-o">o pasale a cada equipo su link / QR</p>
       <div class="padel-qrs">
         <div class="card padel-qr-card team-a">
           <p class="padel-qr-name" id="padel-qr-name-a">Equipo A</p>
@@ -317,6 +321,28 @@
       </div>
       <p class="hint" id="padel-links-aviso"></p>
       <button class="btn btn-primary" id="btn-padel-links-volver">Volver al tablero</button>
+    </section>
+
+    <!-- ============ PÁDEL · UNIRME CON CÓDIGO ============ -->
+    <section class="screen" id="screen-padel-join" aria-label="Unirme a un partido">
+      <div class="brand">
+        <div class="brand-emoji">📲</div>
+        <h1 class="title">Unirme</h1>
+        <p class="subtitle">Código del tablero</p>
+      </div>
+
+      <div class="card config-card">
+        <input type="text" id="padel-codigo-inp" class="text-input padel-codigo-inp" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="······" autocomplete="off" aria-label="Código de 6 números" />
+        <p class="padel-join-estado" id="padel-join-estado"></p>
+        <div class="padel-equipos" id="padel-join-equipos" hidden>
+          <span class="field-label">¿De qué equipo sos?</span>
+          <button type="button" class="btn padel-equipo-btn team-a" data-unir-equipo="a" id="padel-unir-a">Equipo A</button>
+          <button type="button" class="btn padel-equipo-btn team-b" data-unir-equipo="b" id="padel-unir-b">Equipo B</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-padel-conectar">Conectar</button>
+      <button type="button" class="link-btn" id="btn-padel-join-volver">Volver</button>
     </section>
 
     <!-- ============ PÁDEL · CONTROL (el celular que abre el link) ============ -->
@@ -351,8 +377,8 @@
 
   </main>
 
-  <script src="script.js?v=1.7.1" defer></script>
-  <script src="padel-reglas.js?v=1.7.1" defer></script>
-  <script src="padel.js?v=1.7.1" defer></script>
+  <script src="script.js?v=1.8.0" defer></script>
+  <script src="padel-reglas.js?v=1.8.0" defer></script>
+  <script src="padel.js?v=1.8.0" defer></script>
 </body>
 </html>

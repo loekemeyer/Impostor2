@@ -836,6 +836,46 @@ body {
 .padel-qr svg { display: block; width: 100%; height: auto; }
 .padel-share { padding: 12px 8px; font-size: 0.95rem; }
 
+/* ---------- Código del partido ---------- */
+.padel-links-titulo { text-align: center; }
+.padel-codigo-card { text-align: center; padding: 18px 20px; }
+.padel-codigo-card .reveal-eyebrow { margin-bottom: 6px; }
+.padel-codigo {
+  font-size: clamp(2.8rem, 15vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  -webkit-user-select: text;   /* que se pueda copiar */
+  user-select: text;
+}
+.padel-codigo-card .handoff-sub { margin-top: 8px; font-size: 0.95rem; }
+.padel-o { text-align: center; color: var(--text-soft); font-size: 0.9rem; font-weight: 600; }
+
+/* ---------- Unirme con código ---------- */
+.padel-codigo-inp {
+  font-size: 2.2rem;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 0.3em;
+  padding: 12px 0 12px 0.3em;   /* compensa el letter-spacing del último número */
+  font-variant-numeric: tabular-nums;
+}
+.padel-codigo-inp:focus { border-color: var(--accent); }
+.padel-join-estado { text-align: center; font-weight: 700; color: var(--text-soft); }
+.padel-join-estado:empty { display: none; }
+.padel-join-estado.is-ok { color: var(--accent); }
+.padel-join-estado.is-bad { color: var(--danger); }
+.padel-equipos { display: flex; flex-direction: column; gap: 10px; }
+.padel-equipo-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: linear-gradient(135deg, var(--team-a), var(--team-a-2));
+  color: #04130a;
+}
+.padel-equipo-btn.team-b { background: linear-gradient(135deg, var(--team-b), var(--team-b-2)); color: #031522; }
+
 /* ---------- Control (celular que abrió el link) ---------- */
 .padel-remote-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .padel-estado { font-weight: 700; color: var(--text-soft); font-size: 0.95rem; }

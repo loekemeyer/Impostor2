@@ -6,10 +6,14 @@
    Control (el celu que abre el link): un botón grande que suma punto
    para SU equipo y "deshacer mi último punto".
 
+   Conexión: el tablero inventa un código de 6 números al empezar. Los
+   otros celulares entran con ese código (🎾 Pádel → Unirme con código)
+   o con el link/QR de su equipo, que lleva el mismo código.
    Sincronización: Supabase Realtime (broadcast + presence) en el canal
-   "padel-<id>". No se guarda nada en la base de datos: el tablero es el
-   dueño del partido (lo guarda en localStorage) y después de cada cambio
-   manda el estado completo a los controles.
+   "padel-<código>". Supabase sólo pasa los mensajes entre celulares; no
+   se guarda nada en la base de datos: el tablero es el dueño del partido
+   (lo guarda en localStorage) y después de cada cambio manda el estado
+   completo a los controles.
      control → tablero:   "punto" {equipo, eid} · "deshacer" {equipo, eid} · "pedir"
      tablero → controles: "estado" {nombres, puntos, ack}
    "eid" identifica cada pedido: el tablero no lo aplica dos veces y lo
@@ -44,6 +48,7 @@
   pantallas.padel       = document.getElementById("screen-padel");
   pantallas.padelLinks  = document.getElementById("screen-padel-links");
   pantallas.padelRemote = document.getElementById("screen-padel-remote");
+  pantallas.padelJoin   = document.getElementById("screen-padel-join");
 
   const el = (id) => document.getElementById(id);
   const EQUIPOS = ["a", "b"];
@@ -51,8 +56,8 @@
   /* ---------- Estado ---------- */
   const P = {
     rol: null,              // "tablero" | "control" | null (fuera del pádel)
-    id: null,               // id de la sala (va en los links)
-    equipo: null,           // (control) "a" | "b"
+    id: null,               // código de la sala: 6 números (va en los links)
+    equipo: null,           // (control) "a" | "b" | null mientras elige equipo
     nombres: { a: "", b: "" },
     puntos: "",             // "abba…f" — fuente única del marcador (ver padel-reglas.js)
     setDescartado: 0,       // (tablero) sets ya cerrados en los que tocaron "Seguir jugando"
@@ -67,7 +72,8 @@
     pendiente: null,        // (control) { eid, tipo } esperando ack
     pendienteTimer: null,
     wakeLock: null,
-    ocultoDesde: 0
+    ocultoDesde: 0,
+    buscandoDesde: 0        // (control) cuándo empezó a buscar el tablero por código
   };
 
   const nombre = (e) => P.nombres[e] || (e === "a" ? "Equipo A" : "Equipo B");
@@ -89,6 +95,12 @@
     const abc = "abcdefghijkmnpqrstuvwxyz23456789";
     return Array.from(crypto.getRandomValues(new Uint8Array(8)), (n) => abc[n % abc.length]).join("");
   }
+
+  /** Código de sala: 6 números al azar ("048213"). */
+  function nuevoCodigo() {
+    return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
+  }
+  const codigoLindo = (c) => `${c.slice(0, 3)} ${c.slice(3)}`;
 
   function cambiarUrl(query) {
     try { history.replaceState(null, "", base() + query); } catch (e) { /* file:// */ }
@@ -240,7 +252,8 @@
       P.puntos = typeof datos.puntos === "string" ? datos.puntos : "";
       P.recibido = true;
       if (P.pendiente && datos.ack === P.pendiente.eid) confirmarPendiente();
-      renderControl();
+      if (P.equipo) renderControl();
+      else renderUnirme();
     }
   }
 
@@ -253,7 +266,7 @@
       c.textContent = "📡 ";
       if (P.conexion === "error") c.append("sin conexión");
       else if (P.conexion !== "ok") c.append("conectando…");
-      else if (!hayControles) c.append("sin controles");
+      else if (!hayControles) c.append(codigoLindo(P.id));
       else EQUIPOS.forEach((e) => {
         const punto = document.createElement("i");
         punto.className = `padel-dot team-${e}` + (P.controles[e] ? " is-on" : "");
@@ -264,7 +277,8 @@
         ? ""
         : "El tablero no está conectado: los links van a andar cuando se conecte.";
     } else if (P.rol === "control") {
-      renderControl();
+      if (P.equipo) renderControl();
+      else renderUnirme();
     }
   }
 
@@ -302,7 +316,7 @@
   function empezarPartido() {
     leerNombres();
     guardarLS(CLAVE_PREFS, { nombres: P.nombres });
-    P.id = nuevoId();
+    P.id = nuevoCodigo();
     P.puntos = "";
     P.procesados = [];
     P.setDescartado = 0;
@@ -446,6 +460,7 @@
 
   /* ---------- Links + QR ---------- */
   async function abrirLinks() {
+    el("padel-codigo").textContent = codigoLindo(P.id);
     EQUIPOS.forEach((e) => { el(`padel-qr-name-${e}`).textContent = nombre(e); });
     actualizarConexion();
     mostrarPantalla("padelLinks");
@@ -483,7 +498,90 @@
   }
 
   /* ===================================================================
-     Control (celular que abrió el link de un equipo)
+     Unirme con código (otro celular)
+     =================================================================== */
+  function abrirUnirme() {
+    salirDeSala();
+    el("padel-codigo-inp").value = "";
+    renderUnirme();
+    mostrarPantalla("padelJoin");
+    el("padel-codigo-inp").focus();   // dentro del toque: así iOS abre el teclado
+    sonar("click");
+  }
+
+  /** Se conecta a la sala del código escrito (y espera los nombres de los equipos). */
+  function buscarTablero() {
+    const codigo = el("padel-codigo-inp").value.replace(/\D/g, "");
+    if (codigo.length !== 6) {
+      el("padel-join-estado").textContent = "El código tiene 6 números.";
+      el("padel-join-estado").className = "padel-join-estado is-bad";
+      return;
+    }
+    if (P.rol === "control" && P.id === codigo) {
+      // ya conectado a esa sala: vuelve a preguntar por el tablero
+      P.buscandoDesde = Date.now();
+      enviar("pedir", {});
+      renderUnirme();
+      setTimeout(renderUnirme, 3100);
+      return;
+    }
+    P.rol = "control";
+    P.id = codigo;
+    P.equipo = null;
+    P.puntos = "";
+    P.nombres = { a: "", b: "" };
+    P.recibido = false;
+    P.buscandoDesde = Date.now();
+    el("padel-codigo-inp").blur();
+    conectarSala();
+    renderUnirme();
+    setTimeout(renderUnirme, 3100);   // para mostrar "no hay tablero" si no aparece
+  }
+
+  function renderUnirme() {
+    const buscando = P.rol === "control" && !P.equipo;
+    const estadoEl = el("padel-join-estado");
+    let txt = "";
+    let clase = "";
+    if (buscando) {
+      if (P.conexion === "error") { txt = "Sin conexión a internet"; clase = "is-bad"; }
+      else if (P.recibido) { txt = `✓ Partido ${codigoLindo(P.id)} encontrado`; clase = "is-ok"; }
+      else if (P.conexion === "ok" && !P.tableroOnline && Date.now() - P.buscandoDesde > 3000) {
+        txt = "No hay ningún tablero abierto con ese código"; clase = "is-bad";
+      } else txt = "Buscando el tablero…";
+    }
+    estadoEl.textContent = txt;
+    estadoEl.className = `padel-join-estado ${clase}`;
+
+    const listo = buscando && P.recibido;
+    el("padel-join-equipos").hidden = !listo;
+    el("btn-padel-conectar").hidden = listo;
+    EQUIPOS.forEach((e) => { el(`padel-unir-${e}`).textContent = nombre(e); });
+  }
+
+  /** Elegido el equipo, pasa a la pantalla de marcar (y queda en la URL por si recarga). */
+  function elegirEquipo(e) {
+    P.equipo = e;
+    if (P.canal && P.conexion === "ok") P.canal.track({ rol: "control", equipo: e }).catch(() => {});
+    cambiarUrl(`?padel=${P.id}&equipo=${e}`);
+    renderControl();
+    mostrarPantalla("padelRemote");
+    sonar("click");
+  }
+
+  /** Corta la conexión de un control (sin cambiar de pantalla). */
+  function salirDeSala() {
+    if (P.rol !== "control") return;
+    clearTimeout(P.pendienteTimer);
+    P.pendiente = null;
+    desconectarSala();
+    P.rol = null;
+    P.equipo = null;
+    cambiarUrl("");
+  }
+
+  /* ===================================================================
+     Control (celular que marca los puntos de un equipo)
      =================================================================== */
   function iniciarControl(id, equipo) {
     P.rol = "control";
@@ -528,11 +626,7 @@
   }
 
   function salirControl() {
-    clearTimeout(P.pendienteTimer);
-    P.pendiente = null;
-    desconectarSala();
-    P.rol = null;
-    cambiarUrl("");
+    salirDeSala();
     mostrarPantalla("config");
     sonar("click");
   }
@@ -577,6 +671,23 @@
   el("btn-padel-empezar").addEventListener("click", empezarPartido);
   el("btn-padel-continuar").addEventListener("click", continuarPartido);
   el("btn-padel-volver").addEventListener("click", () => { mostrarPantalla("config"); sonar("click"); });
+  el("btn-padel-unirme").addEventListener("click", abrirUnirme);
+
+  // unirme: sólo números; al completar los 6 se conecta solo
+  el("padel-codigo-inp").addEventListener("input", (ev) => {
+    const limpio = ev.target.value.replace(/\D/g, "").slice(0, 6);
+    if (ev.target.value !== limpio) ev.target.value = limpio;
+    if (P.rol === "control" && P.id !== limpio) salirDeSala();   // cambió el código
+    if (limpio.length === 6) buscarTablero();
+    else renderUnirme();
+  });
+  el("btn-padel-conectar").addEventListener("click", buscarTablero);
+  EQUIPOS.forEach((e) => el(`padel-unir-${e}`).addEventListener("click", () => elegirEquipo(e)));
+  el("btn-padel-join-volver").addEventListener("click", () => {
+    salirDeSala();
+    mostrarPantalla("padelConfig");
+    sonar("click");
+  });
 
   EQUIPOS.forEach((e) => el(`padel-half-${e}`).addEventListener("click", () => sumarPunto(e)));
   el("padel-deshacer").addEventListener("click", () => deshacer());
