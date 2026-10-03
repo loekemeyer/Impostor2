@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>El Impostor 🕵️‍♂️ · Fútbol, Mixto o Número</title>
-  <link rel="stylesheet" href="styles.css?v=1.7.0" />
+  <link rel="stylesheet" href="styles.css?v=1.7.1" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -246,29 +246,7 @@
           </div>
         </div>
 
-        <div class="field">
-          <span class="field-label">Partido</span>
-          <div class="segmented" role="group" aria-label="Cantidad de sets">
-            <button type="button" class="seg-btn" data-padel-sets="1">1 set</button>
-            <button type="button" class="seg-btn" data-padel-sets="3">Al mejor de 3</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <span class="field-label">En 40-40</span>
-          <div class="segmented" role="group" aria-label="Regla de iguales">
-            <button type="button" class="seg-btn" data-padel-oro="0">Ventaja</button>
-            <button type="button" class="seg-btn" data-padel-oro="1">Punto de oro</button>
-          </div>
-        </div>
-
-        <div class="field" id="padel-field-tercero">
-          <span class="field-label">Tercer set</span>
-          <div class="segmented" role="group" aria-label="Tercer set">
-            <button type="button" class="seg-btn" data-padel-super="0">Set completo</button>
-            <button type="button" class="seg-btn" data-padel-super="1">Súper tie-break</button>
-          </div>
-        </div>
+        <p class="padel-reglas-txt">40-40 es iguales, después ventaja y game. Al terminar cada set elegís si siguen jugando.</p>
       </div>
 
       <button class="btn btn-primary" id="btn-padel-continuar" hidden>Continuar partido</button>
@@ -303,15 +281,18 @@
           <span class="padel-meta">Games <b id="padel-games-b">0</b> · Sets <b id="padel-sets-b">0</b></span>
         </button>
 
-        <!-- partido terminado -->
+        <!-- fin de set (¿seguir o terminar?) y partido terminado -->
         <div class="padel-fin" id="padel-fin" hidden>
           <div class="card padel-fin-card">
-            <p class="final-emoji">🏆</p>
-            <h2 class="final-title" id="padel-fin-titulo">¡Ganó Equipo A!</h2>
+            <p class="final-emoji" id="padel-fin-emoji">🎾</p>
+            <h2 class="final-title" id="padel-fin-titulo">Set para Equipo A</h2>
             <p class="padel-fin-sets" id="padel-fin-sets"></p>
+            <p class="padel-fin-total" id="padel-fin-total"></p>
           </div>
+          <button class="btn btn-primary" id="btn-padel-seguir">Seguir jugando</button>
+          <button class="btn btn-ghost" id="btn-padel-terminar">Terminar partido</button>
           <button class="btn btn-primary" id="btn-padel-nuevo">Nuevo partido</button>
-          <button class="btn btn-ghost" id="btn-padel-fin-deshacer">Deshacer último punto</button>
+          <button type="button" class="link-btn" id="btn-padel-fin-deshacer">↺ Deshacer</button>
         </div>
       </div>
     </section>
@@ -370,8 +351,8 @@
 
   </main>
 
-  <script src="script.js?v=1.7.0" defer></script>
-  <script src="padel-reglas.js?v=1.7.0" defer></script>
-  <script src="padel.js?v=1.7.0" defer></script>
+  <script src="script.js?v=1.7.1" defer></script>
+  <script src="padel-reglas.js?v=1.7.1" defer></script>
+  <script src="padel.js?v=1.7.1" defer></script>
 </body>
 </html>

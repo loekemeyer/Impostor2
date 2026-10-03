@@ -11,7 +11,7 @@
    dueño del partido (lo guarda en localStorage) y después de cada cambio
    manda el estado completo a los controles.
      control → tablero:   "punto" {equipo, eid} · "deshacer" {equipo, eid} · "pedir"
-     tablero → controles: "estado" {cfg, nombres, puntos, ack}
+     tablero → controles: "estado" {nombres, puntos, ack}
    "eid" identifica cada pedido: el tablero no lo aplica dos veces y lo
    devuelve en "ack" para que el control sepa que llegó.
 
@@ -53,9 +53,9 @@
     rol: null,              // "tablero" | "control" | null (fuera del pádel)
     id: null,               // id de la sala (va en los links)
     equipo: null,           // (control) "a" | "b"
-    cfg: { sets: 3, oro: false, superTb: false },
     nombres: { a: "", b: "" },
-    puntos: "",             // "abba…" — fuente única del marcador
+    puntos: "",             // "abba…f" — fuente única del marcador (ver padel-reglas.js)
+    setDescartado: 0,       // (tablero) sets ya cerrados en los que tocaron "Seguir jugando"
     procesados: [],         // (tablero) eids ya aplicados
     recibido: false,        // (control) ya llegó al menos un estado del tablero
     // conexión
@@ -125,12 +125,11 @@
     elemento.classList.add("is-flash");
   }
 
-  /** Etiqueta del momento del game: tie-break, punto de oro, iguales, ventaja. */
+  /** Etiqueta del momento: fin del partido, fin de set, tie-break, iguales, ventaja. */
   function etiqueta(r) {
-    if (r.ganador) return "";
-    if (r.superTb) return "Súper tie-break";
+    if (r.terminado) return r.ganador === "empate" ? "Empate" : `¡Ganó ${nombre(r.ganador)}!`;
+    if (r.finDeSet) return `Set para ${nombre(r.sets[r.sets.length - 1].g)}`;
     if (r.tb) return "Tie-break";
-    if (r.oroAhora) return "Punto de oro";
     if (r.iguales) return "Iguales";
     if (r.ventaja) return `Ventaja ${nombre(r.ventaja)}`;
     return "";
@@ -212,7 +211,7 @@
 
   /** (tablero) Manda el partido completo a todos los controles. */
   function difundir(ack) {
-    enviar("estado", { cfg: P.cfg, nombres: P.nombres, puntos: P.puntos, ack: ack || null });
+    enviar("estado", { nombres: P.nombres, puntos: P.puntos, ack: ack || null });
   }
 
   function alPresencia(estadoPresencia) {
@@ -237,7 +236,6 @@
       return;
     }
     if (P.rol === "control" && evento === "estado") {
-      if (datos.cfg) P.cfg = datos.cfg;
       if (datos.nombres) P.nombres = datos.nombres;
       P.puntos = typeof datos.puntos === "string" ? datos.puntos : "";
       P.recibido = true;
@@ -275,7 +273,6 @@
      =================================================================== */
   function abrirConfig() {
     const prefs = leerLS(CLAVE_PREFS);
-    if (prefs && prefs.cfg) P.cfg = prefs.cfg;
     if (prefs && prefs.nombres) P.nombres = prefs.nombres;
     el("padel-nombre-a").value = P.nombres.a || "";
     el("padel-nombre-b").value = P.nombres.b || "";
@@ -284,20 +281,12 @@
   }
 
   function renderConfig() {
-    document.querySelectorAll("[data-padel-sets]").forEach((b) =>
-      b.classList.toggle("is-selected", Number(b.dataset.padelSets) === P.cfg.sets));
-    document.querySelectorAll("[data-padel-oro]").forEach((b) =>
-      b.classList.toggle("is-selected", (b.dataset.padelOro === "1") === !!P.cfg.oro));
-    document.querySelectorAll("[data-padel-super]").forEach((b) =>
-      b.classList.toggle("is-selected", (b.dataset.padelSuper === "1") === !!P.cfg.superTb));
-    el("padel-field-tercero").hidden = P.cfg.sets === 1;
-
     // si quedó un partido sin terminar, se ofrece seguirlo
     const g = leerLS(CLAVE_PARTIDO);
     const btn = el("btn-padel-continuar");
-    const r = g && g.cfg && typeof g.puntos === "string" && g.puntos ? calcularPadel(g.cfg, g.puntos) : null;
-    btn.hidden = !r || !!r.ganador;
-    if (r && !r.ganador) {
+    const r = g && typeof g.puntos === "string" && g.puntos ? calcularPadel(g.puntos) : null;
+    btn.hidden = !r || r.terminado;
+    if (r && !r.terminado) {
       const marcador = r.sets.map(textoSet).concat(`${r.games.a}-${r.games.b}`).join(" · ");
       btn.textContent = `Continuar partido (${marcador})`;
     }
@@ -312,10 +301,11 @@
 
   function empezarPartido() {
     leerNombres();
-    guardarLS(CLAVE_PREFS, { cfg: P.cfg, nombres: P.nombres });
+    guardarLS(CLAVE_PREFS, { nombres: P.nombres });
     P.id = nuevoId();
     P.puntos = "";
     P.procesados = [];
+    P.setDescartado = 0;
     guardarPartido();
     iniciarTablero();
   }
@@ -329,14 +319,16 @@
 
   function cargarPartido(g) {
     P.id = g.id;
-    P.cfg = g.cfg;
     P.nombres = g.nombres || { a: "", b: "" };
     P.puntos = g.puntos || "";
     P.procesados = g.procesados || [];
+    P.setDescartado = g.setDescartado || 0;
   }
 
   function guardarPartido() {
-    guardarLS(CLAVE_PARTIDO, { id: P.id, cfg: P.cfg, nombres: P.nombres, puntos: P.puntos, procesados: P.procesados });
+    guardarLS(CLAVE_PARTIDO, {
+      id: P.id, nombres: P.nombres, puntos: P.puntos, procesados: P.procesados, setDescartado: P.setDescartado
+    });
   }
 
   /* ===================================================================
@@ -353,7 +345,7 @@
   }
 
   function sumarPunto(e, eid) {
-    if (calcularPadel(P.cfg, P.puntos).ganador) return difundir(eid);
+    if (calcularPadel(P.puntos).terminado) return difundir(eid);
     P.puntos += e;
     guardarPartido();
     renderTablero();
@@ -372,9 +364,27 @@
     difundir(eid);
   }
 
+  /** Fin de set: siguen jugando (sólo cierra el cartel; el próximo punto arranca el set). */
+  function seguirJugando() {
+    P.setDescartado = calcularPadel(P.puntos).sets.length;
+    guardarPartido();
+    renderTablero();
+    sonar("click");
+  }
+
+  /** Fin de set: termina el partido ("f" en la lista; se puede deshacer). */
+  function terminarPartido() {
+    P.puntos += "f";
+    guardarPartido();
+    renderTablero();
+    sonar("normal");
+    difundir();
+  }
+
   function nuevoPartido() {
     P.puntos = "";
     P.procesados = [];
+    P.setDescartado = 0;
     guardarPartido();
     renderTablero();
     sonar("click");
@@ -392,10 +402,10 @@
   }
 
   function renderTablero() {
-    const r = calcularPadel(P.cfg, P.puntos);
+    const r = calcularPadel(P.puntos);
     EQUIPOS.forEach((e) => {
       el(`padel-name-${e}`).textContent = nombre(e);
-      el(`padel-pts-${e}`).textContent = r.ganador ? (r.ganador === e ? "🏆" : "") : r.display[e];
+      el(`padel-pts-${e}`).textContent = r.terminado ? (r.ganador === e ? "🏆" : "") : r.display[e];
       el(`padel-games-${e}`).textContent = r.games[e];
       el(`padel-sets-${e}`).textContent = r.setsGanados[e];
     });
@@ -408,7 +418,7 @@
       span.textContent = textoSet(s);
       hist.appendChild(span);
     });
-    if (!r.ganador) {
+    if (!r.terminado && !r.finDeSet) {
       const actual = document.createElement("b");
       actual.textContent = `${r.games.a}-${r.games.b}`;
       hist.appendChild(actual);
@@ -417,10 +427,19 @@
     el("padel-etiqueta").textContent = etiqueta(r);
     el("padel-deshacer").disabled = !P.puntos;
 
-    el("padel-fin").hidden = !r.ganador;
-    if (r.ganador) {
-      el("padel-fin-titulo").textContent = `¡Ganó ${nombre(r.ganador)}!`;
+    // cartel: al cerrar un set (¿seguir o terminar?) y al terminar el partido
+    const pausa = r.finDeSet && P.setDescartado !== r.sets.length;
+    el("padel-fin").hidden = !(pausa || r.terminado);
+    if (pausa || r.terminado) {
+      el("padel-fin-emoji").textContent = !r.terminado ? "🎾" : r.ganador === "empate" ? "🤝" : "🏆";
+      el("padel-fin-titulo").textContent = etiqueta(r);
       el("padel-fin-sets").textContent = r.sets.map(textoSet).join("  ·  ");
+      el("padel-fin-total").textContent = r.sets.length
+        ? `Sets: ${nombre("a")} ${r.setsGanados.a} – ${r.setsGanados.b} ${nombre("b")}`
+        : "";
+      el("btn-padel-seguir").hidden = r.terminado;
+      el("btn-padel-terminar").hidden = r.terminado;
+      el("btn-padel-nuevo").hidden = !r.terminado;
     }
     actualizarConexion();
   }
@@ -519,17 +538,17 @@
   }
 
   function renderControl() {
-    const r = calcularPadel(P.cfg, P.puntos);
+    const r = calcularPadel(P.puntos);
     const listo = P.conexion === "ok" && P.tableroOnline && P.recibido;
 
     EQUIPOS.forEach((e) => {
       el(`padel-mini-${e}`).classList.toggle("is-mine", e === P.equipo);
       el(`padel-mini-name-${e}`).textContent = nombre(e);
       el(`padel-mini-sets-${e}`).textContent = r.sets.map((s) => s[e]).join(" ");
-      el(`padel-mini-games-${e}`).textContent = r.ganador ? "" : r.games[e];
-      el(`padel-mini-pts-${e}`).textContent = r.ganador ? (r.ganador === e ? "🏆" : "") : r.display[e];
+      el(`padel-mini-games-${e}`).textContent = r.terminado ? "" : r.games[e];
+      el(`padel-mini-pts-${e}`).textContent = r.terminado ? (r.ganador === e ? "🏆" : "") : r.display[e];
     });
-    el("padel-remote-etiqueta").textContent = r.ganador ? `¡Ganó ${nombre(r.ganador)}!` : etiqueta(r);
+    el("padel-remote-etiqueta").textContent = etiqueta(r);
 
     const estadoEl = el("padel-remote-estado");
     let txt = "Conectando…";
@@ -543,7 +562,7 @@
     const boton = el("padel-remote-punto");
     boton.classList.toggle("team-b", P.equipo === "b");
     boton.classList.toggle("is-sending", !!P.pendiente);
-    boton.disabled = !listo || !!r.ganador;
+    boton.disabled = !listo || r.terminado;
     el("padel-remote-equipo").textContent = nombre(P.equipo);
     boton.querySelector(".padel-boton-mas").textContent = P.pendiente && P.pendiente.tipo === "punto" ? "…" : "+1";
 
@@ -555,22 +574,6 @@
      =================================================================== */
   el("btn-open-padel").addEventListener("click", () => { abrirConfig(); sonar("click"); });
 
-  document.querySelectorAll("[data-padel-sets]").forEach((b) => b.addEventListener("click", () => {
-    P.cfg = { ...P.cfg, sets: Number(b.dataset.padelSets) };
-    renderConfig();
-    sonar("click");
-  }));
-  document.querySelectorAll("[data-padel-oro]").forEach((b) => b.addEventListener("click", () => {
-    P.cfg = { ...P.cfg, oro: b.dataset.padelOro === "1" };
-    renderConfig();
-    sonar("click");
-  }));
-  document.querySelectorAll("[data-padel-super]").forEach((b) => b.addEventListener("click", () => {
-    P.cfg = { ...P.cfg, superTb: b.dataset.padelSuper === "1" };
-    renderConfig();
-    sonar("click");
-  }));
-
   el("btn-padel-empezar").addEventListener("click", empezarPartido);
   el("btn-padel-continuar").addEventListener("click", continuarPartido);
   el("btn-padel-volver").addEventListener("click", () => { mostrarPantalla("config"); sonar("click"); });
@@ -579,6 +582,8 @@
   el("padel-deshacer").addEventListener("click", () => deshacer());
   el("btn-padel-fin-deshacer").addEventListener("click", () => deshacer());
   el("btn-padel-nuevo").addEventListener("click", nuevoPartido);
+  el("btn-padel-seguir").addEventListener("click", seguirJugando);
+  el("btn-padel-terminar").addEventListener("click", terminarPartido);
   el("padel-salir").addEventListener("click", salirTablero);
   el("padel-links").addEventListener("click", abrirLinks);
   el("btn-padel-links-volver").addEventListener("click", () => { mostrarPantalla("padel"); sonar("click"); });

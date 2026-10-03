@@ -663,9 +663,6 @@ body {
   #screen-padel-config .brand-emoji { display: none; }
   #screen-config .title,
   #screen-padel-config .title { font-size: 2rem; }
-  #screen-padel-config .field { gap: 6px; }
-  #screen-padel-config .seg-btn { padding: 8px 6px; }
-  #screen-padel-config .text-input { padding: 9px 10px; }
 }
 
 /* ===================================================================
@@ -691,6 +688,7 @@ body {
   user-select: text;
 }
 .text-input:focus { outline: none; }
+.padel-reglas-txt { color: var(--text-soft); font-size: 0.9rem; line-height: 1.4; }
 .text-input.team-a:focus { border-color: var(--team-a); }
 .text-input.team-b:focus { border-color: var(--team-b); }
 
@@ -780,7 +778,7 @@ body {
 .padel-etiqueta { color: #fbbf24; text-transform: uppercase; letter-spacing: 0.08em; }
 .padel-etiqueta:empty { display: none; }
 .padel-conexion { color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; gap: 4px; }
-.padel-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+.padel-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
 .padel-dot.team-a.is-on { background: var(--team-a); }
 .padel-dot.team-b.is-on { background: var(--team-b); }
 .padel-controls { display: flex; gap: 8px; flex: none; }
@@ -809,6 +807,9 @@ body {
   color: var(--text-soft);
   font-variant-numeric: tabular-nums;
 }
+.padel-fin-total { margin-top: 6px; color: var(--text-soft); font-size: 0.95rem; font-weight: 600; }
+.padel-fin-total:empty { display: none; }
+.padel-fin .link-btn { align-self: center; }
 
 /* ---------- Links + QR ---------- */
 .padel-qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
