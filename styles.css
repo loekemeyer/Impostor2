@@ -875,9 +875,11 @@ body {
   color: #04130a;
 }
 .padel-equipo-btn.team-b { background: linear-gradient(135deg, var(--team-b), var(--team-b-2)); color: #031522; }
+.padel-equipo-btn.ambos { background: linear-gradient(135deg, var(--team-a), var(--team-b)); color: #04130a; }
 
 /* ---------- Control (celular que abrió el link) ---------- */
 .padel-remote-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.padel-remote-links { display: flex; gap: 14px; flex: none; }
 .padel-estado { font-weight: 700; color: var(--text-soft); font-size: 0.95rem; }
 .padel-estado.is-ok { color: var(--accent); }
 .padel-estado.is-bad { color: var(--danger); }
@@ -911,9 +913,11 @@ body {
 .padel-mini-pts { text-align: right; font-size: 1.4rem; font-weight: 900; }
 .padel-mini .padel-etiqueta { font-size: 0.78rem; font-weight: 700; text-align: center; }
 
+/* uno o dos botones gigantes: se reparten todo el alto que queda */
+.padel-botones { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .padel-boton {
-  flex: 1 1 auto;
-  min-height: 180px;
+  flex: 1 1 0;
+  min-height: 120px;
   border: none;
   border-radius: var(--radius);
   background: linear-gradient(135deg, var(--team-a), var(--team-a-2));

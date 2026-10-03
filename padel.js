@@ -3,8 +3,8 @@
    -------------------------------------------------------------------
    Tablero (este celu): tocar la mitad de un equipo = punto para ese
    equipo. ↺ deshace. 🔗 muestra un link (y un QR) por equipo.
-   Control (el celu que abre el link): un botón grande que suma punto
-   para SU equipo y "deshacer mi último punto".
+   Control (otro celu): elige marcar sólo su equipo (un botón gigante)
+   o los dos equipos (un botón gigante por equipo), y puede deshacer.
 
    Conexión: el tablero inventa un código de 6 números al empezar. Los
    otros celulares entran con ese código (🎾 Pádel → Unirme con código)
@@ -14,10 +14,11 @@
    control habla directo con el tablero. No hay base de datos ni cuenta:
    el tablero es el dueño del partido (lo guarda en localStorage) y
    después de cada cambio manda el estado completo a los controles.
-     control → tablero:   "hola" {equipo} · "punto" {eid} · "deshacer" {eid} · "pedir"
+     control → tablero:   "hola" {equipo: "a"|"b"|"ambos"} · "punto" {equipo, eid}
+                          · "deshacer" {eid} · "pedir"
      tablero → controles: "estado" {nombres, puntos, ack}
-   El tablero usa el equipo con el que se presentó cada control: un
-   control no puede marcar ni deshacer puntos del otro equipo.
+   El tablero respeta lo que eligió cada control al presentarse: uno de
+   "a" sólo puede marcar y deshacer puntos de "a"; uno de "ambos", de los dos.
    "eid" identifica cada pedido: el tablero no lo aplica dos veces y lo
    devuelve en "ack" para que el control sepa que llegó.
 
@@ -54,12 +55,13 @@
 
   const el = (id) => document.getElementById(id);
   const EQUIPOS = ["a", "b"];
+  const OPCIONES = ["a", "b", "ambos"];   // qué puede marcar un control
 
   /* ---------- Estado ---------- */
   const P = {
     rol: null,              // "tablero" | "control" | null (fuera del pádel)
     id: null,               // código de la sala: 6 números (va en los links)
-    equipo: null,           // (control) "a" | "b" | null mientras elige equipo
+    equipo: null,           // (control) "a" | "b" | "ambos" | null mientras elige
     nombres: { a: "", b: "" },
     puntos: "",             // "abba…f" — fuente única del marcador (ver padel-reglas.js)
     setDescartado: 0,       // (tablero) sets ya cerrados en los que tocaron "Seguir jugando"
@@ -68,7 +70,7 @@
     // conexión
     peer: null,             // PeerJS de este celular
     conn: null,             // (control) conexión directa con el tablero
-    conns: new Map(),       // (tablero) conexión de cada control → su equipo
+    conns: new Map(),       // (tablero) conexión de cada control → "a" | "b" | "ambos"
     token: null,            // (tablero) secreto para recuperar el mismo código al recargar
     reintento: null,
     conexion: "off",        // servidor de PeerJS: "off" | "conectando" | "ok" | "error"
@@ -307,15 +309,19 @@
   function recibirControl(conn) {
     conn.on("data", (d) => {
       if (!d || typeof d !== "object") return;
+      const elegido = P.conns.get(conn);   // lo que eligió al presentarse
       if (d.t === "hola") {
-        P.conns.set(conn, EQUIPOS.includes(d.equipo) ? d.equipo : null);
+        P.conns.set(conn, OPCIONES.includes(d.equipo) ? d.equipo : null);
         contarControles();
         mandarEstado(conn);
       } else if (d.t === "pedir") {
         mandarEstado(conn);
-      } else if ((d.t === "punto" || d.t === "deshacer") && P.conns.get(conn)) {
-        // vale el equipo con el que se presentó, no el que diga el mensaje
-        alRecibir(d.t, { eid: d.eid, equipo: P.conns.get(conn) });
+      } else if (d.t === "punto" && elegido) {
+        // un control de un equipo sólo marca para ese equipo
+        const equipo = elegido === "ambos" ? d.equipo : elegido;
+        alRecibir("punto", { eid: d.eid, equipo });
+      } else if (d.t === "deshacer" && elegido) {
+        alRecibir("deshacer", { eid: d.eid, permitidos: elegido === "ambos" ? EQUIPOS : [elegido] });
       }
     });
     const caida = () => {
@@ -327,10 +333,10 @@
   }
 
   function contarControles() {
-    const equipos = [...P.conns.values()];
+    const elegidos = [...P.conns.values()];
     P.controles = {
-      a: equipos.filter((e) => e === "a").length,
-      b: equipos.filter((e) => e === "b").length
+      a: elegidos.filter((e) => e === "a" || e === "ambos").length,
+      b: elegidos.filter((e) => e === "b" || e === "ambos").length
     };
     actualizarConexion();
   }
@@ -350,11 +356,12 @@
     if (P.rol === "tablero") {
       if (evento === "pedir") return difundir();
       if (evento !== "punto" && evento !== "deshacer") return;
-      if (!EQUIPOS.includes(datos.equipo) || typeof datos.eid !== "string") return;
+      if (typeof datos.eid !== "string") return;
+      if (evento === "punto" && !EQUIPOS.includes(datos.equipo)) return;
       if (P.procesados.includes(datos.eid)) return difundir(datos.eid);   // repetido
       P.procesados = P.procesados.concat(datos.eid).slice(-40);
       if (evento === "punto") sumarPunto(datos.equipo, datos.eid);
-      else deshacer(datos.equipo, datos.eid);
+      else deshacer(datos.permitidos, datos.eid);
       return;
     }
     if (P.rol === "control" && evento === "estado") {
@@ -481,9 +488,9 @@
     difundir(eid);
   }
 
-  /** Saca el último punto. Si viene de un control, sólo si ese punto era de su equipo. */
-  function deshacer(soloEquipo, eid) {
-    if (!P.puntos || (soloEquipo && P.puntos.slice(-1) !== soloEquipo)) return difundir(eid);
+  /** Saca el último evento. Si viene de un control, sólo si es un punto que ese control puede marcar. */
+  function deshacer(permitidos, eid) {
+    if (!P.puntos || (permitidos && !permitidos.includes(P.puntos.slice(-1)))) return difundir(eid);
     P.puntos = P.puntos.slice(0, -1);
     guardarPartido();
     renderTablero();
@@ -665,10 +672,21 @@
     const listo = buscando && P.recibido;
     el("padel-join-equipos").hidden = !listo;
     el("btn-padel-conectar").hidden = listo;
-    EQUIPOS.forEach((e) => { el(`padel-unir-${e}`).textContent = nombre(e); });
+    EQUIPOS.forEach((e) => { el(`padel-unir-${e}`).textContent = `Sólo ${nombre(e)}`; });
   }
 
-  /** Elegido el equipo, pasa a la pantalla de marcar (y queda en la URL por si recarga). */
+  /** Desde la pantalla de marcar: volver a elegir equipo sin desconectarse. */
+  function cambiarEquipo() {
+    clearTimeout(P.pendienteTimer);
+    P.pendiente = null;
+    P.equipo = null;
+    el("padel-codigo-inp").value = P.id;
+    renderUnirme();
+    mostrarPantalla("padelJoin");
+    sonar("click");
+  }
+
+  /** Elegido qué marca ("a", "b" o "ambos"), pasa a la pantalla de marcar (queda en la URL por si recarga). */
   function elegirEquipo(e) {
     P.equipo = e;
     enviar("hola", { equipo: e });
@@ -703,15 +721,16 @@
     conectarSala();
   }
 
-  function controlEnviar(tipo) {
+  /** Manda un punto (de "equipo") o un deshacer al tablero y espera la confirmación. */
+  function controlEnviar(tipo, equipo) {
     if (P.pendiente) return;
     if (!P.tableroOnline) {
       mostrarToast("El tablero no está conectado");
       return;
     }
     const eid = nuevoId();
-    if (!enviar(tipo, { equipo: P.equipo, eid })) return;
-    P.pendiente = { eid, tipo };
+    if (!enviar(tipo, { equipo, eid })) return;
+    P.pendiente = { eid, tipo, equipo };
     if (navigator.vibrate) navigator.vibrate(30);
     sonar("click");
     P.pendienteTimer = setTimeout(() => {
@@ -724,10 +743,10 @@
 
   function confirmarPendiente() {
     clearTimeout(P.pendienteTimer);
-    const tipo = P.pendiente.tipo;
+    const { tipo, equipo } = P.pendiente;
     P.pendiente = null;
     if (tipo === "punto") {
-      flash(el("padel-remote-punto"));
+      flash(el(`padel-remote-punto-${equipo}`));
       sonar("normal");
     } else {
       mostrarToast("Punto deshecho");
@@ -762,14 +781,22 @@
     estadoEl.classList.toggle("is-ok", listo);
     estadoEl.classList.toggle("is-bad", !listo && (P.conexion === "error" || P.sinTablero));
 
-    const boton = el("padel-remote-punto");
-    boton.classList.toggle("team-b", P.equipo === "b");
-    boton.classList.toggle("is-sending", !!P.pendiente);
-    boton.disabled = !listo || r.terminado;
-    el("padel-remote-equipo").textContent = nombre(P.equipo);
-    boton.querySelector(".padel-boton-mas").textContent = P.pendiente && P.pendiente.tipo === "punto" ? "…" : "+1";
+    // un botón gigante por equipo que este control puede marcar
+    const ambos = P.equipo === "ambos";
+    EQUIPOS.forEach((e) => {
+      const boton = el(`padel-remote-punto-${e}`);
+      const enviando = !!P.pendiente && P.pendiente.tipo === "punto" && P.pendiente.equipo === e;
+      boton.hidden = !ambos && P.equipo !== e;
+      boton.disabled = !listo || r.terminado;
+      boton.classList.toggle("is-sending", enviando);
+      boton.querySelector(".padel-boton-mas").textContent = enviando ? "…" : "+1";
+      el(`padel-remote-equipo-${e}`).textContent = nombre(e);
+    });
 
-    el("padel-remote-deshacer").disabled = !listo || !!P.pendiente || r.ultimo !== P.equipo;
+    const puedeDeshacer = ambos ? EQUIPOS.includes(r.ultimo) : r.ultimo === P.equipo;
+    const btnDeshacer = el("padel-remote-deshacer");
+    btnDeshacer.textContent = ambos ? "↺ Deshacer último punto" : "↺ Deshacer mi punto";
+    btnDeshacer.disabled = !listo || !!P.pendiente || !puedeDeshacer;
   }
 
   /* ===================================================================
@@ -791,7 +818,7 @@
     else renderUnirme();
   });
   el("btn-padel-conectar").addEventListener("click", buscarTablero);
-  EQUIPOS.forEach((e) => el(`padel-unir-${e}`).addEventListener("click", () => elegirEquipo(e)));
+  OPCIONES.forEach((e) => el(`padel-unir-${e}`).addEventListener("click", () => elegirEquipo(e)));
   el("btn-padel-join-volver").addEventListener("click", () => {
     salirDeSala();
     mostrarPantalla("padelConfig");
@@ -810,8 +837,9 @@
   document.querySelectorAll(".padel-share").forEach((b) =>
     b.addEventListener("click", () => enviarLink(b.dataset.equipo)));
 
-  el("padel-remote-punto").addEventListener("click", () => controlEnviar("punto"));
+  EQUIPOS.forEach((e) => el(`padel-remote-punto-${e}`).addEventListener("click", () => controlEnviar("punto", e)));
   el("padel-remote-deshacer").addEventListener("click", () => controlEnviar("deshacer"));
+  el("padel-remote-cambiar").addEventListener("click", cambiarEquipo);
   el("padel-remote-salir").addEventListener("click", salirControl);
 
   /* Al volver de la pantalla bloqueada / otra app: el socket pudo haber
@@ -834,7 +862,7 @@
   const equipo = params.get("equipo");
   const tablero = params.get("tablero");
 
-  if (sala && /^[a-z0-9]{4,16}$/.test(sala) && EQUIPOS.includes(equipo)) {
+  if (sala && /^[a-z0-9]{4,16}$/.test(sala) && OPCIONES.includes(equipo)) {
     iniciarControl(sala, equipo);
   } else if (tablero) {
     // recarga del tablero: si el partido guardado es ese, se sigue
