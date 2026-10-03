@@ -9,13 +9,15 @@
    Conexión: el tablero inventa un código de 6 números al empezar. Los
    otros celulares entran con ese código (🎾 Pádel → Unirme con código)
    o con el link/QR de su equipo, que lleva el mismo código.
-   Sincronización: Supabase Realtime (broadcast + presence) en el canal
-   "padel-<código>". Supabase sólo pasa los mensajes entre celulares; no
-   se guarda nada en la base de datos: el tablero es el dueño del partido
-   (lo guarda en localStorage) y después de cada cambio manda el estado
-   completo a los controles.
-     control → tablero:   "punto" {equipo, eid} · "deshacer" {equipo, eid} · "pedir"
+   Sincronización: PeerJS (WebRTC). El servidor público gratuito de
+   PeerJS sólo presenta a los celulares por el código; después cada
+   control habla directo con el tablero. No hay base de datos ni cuenta:
+   el tablero es el dueño del partido (lo guarda en localStorage) y
+   después de cada cambio manda el estado completo a los controles.
+     control → tablero:   "hola" {equipo} · "punto" {eid} · "deshacer" {eid} · "pedir"
      tablero → controles: "estado" {nombres, puntos, ack}
+   El tablero usa el equipo con el que se presentó cada control: un
+   control no puede marcar ni deshacer puntos del otro equipo.
    "eid" identifica cada pedido: el tablero no lo aplica dos veces y lo
    devuelve en "ack" para que el control sepa que llegó.
 
@@ -26,14 +28,12 @@
 (function () {
   "use strict";
 
-  /* Supabase "loekemeyer's web": clave publishable (pública por diseño;
-     no da acceso a datos, sólo a los canales de broadcast). */
-  const SUPA_URL = "https://kwkclwhmoygunqmlegrg.supabase.co";
-  const SUPA_KEY = "sb_publishable_mVX5MnjwM770cNjgiL6yLw_LDNl9pML";
+  /* Librerías del CDN (versión fija + SRI), cargadas sólo al usar el pádel.
+     La clave es el nombre global que deja cada una. */
   const LIBS = {
-    supabase: {
-      src: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js",
-      sri: "sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"
+    Peer: {
+      src: "https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js",
+      sri: "sha384-x0YgkOr/3UOZP2CRDxGW9e0Q+2Qjyr3uJrm4xU32Y7ZCNAo7Cc7bjhrZMi/dwczu"
     },
     qrcode: {
       src: "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js",
@@ -43,6 +43,8 @@
   const CLAVE_PARTIDO = "padel-partido";   // localStorage: partido en curso (tablero)
   const CLAVE_PREFS   = "padel-config";    // localStorage: últimos nombres y reglas
   const ESPERA_MS     = 4000;              // sin "ack" en este tiempo, el punto no llegó
+  const REINTENTO_MS  = 3000;              // reintento de conexión
+  const PREFIJO       = "impostor2-padel-"; // id del tablero en PeerJS: prefijo + código
 
   pantallas.padelConfig = document.getElementById("screen-padel-config");
   pantallas.padel       = document.getElementById("screen-padel");
@@ -64,16 +66,19 @@
     procesados: [],         // (tablero) eids ya aplicados
     recibido: false,        // (control) ya llegó al menos un estado del tablero
     // conexión
-    client: null,
-    canal: null,
-    conexion: "off",        // "off" | "conectando" | "ok" | "error"
-    tableroOnline: false,
+    peer: null,             // PeerJS de este celular
+    conn: null,             // (control) conexión directa con el tablero
+    conns: new Map(),       // (tablero) conexión de cada control → su equipo
+    token: null,            // (tablero) secreto para recuperar el mismo código al recargar
+    reintento: null,
+    conexion: "off",        // servidor de PeerJS: "off" | "conectando" | "ok" | "error"
+    tableroOnline: false,   // (control) conectado directo con el tablero
+    sinTablero: false,      // (control) el servidor dijo que no hay tablero con ese código
     controles: { a: 0, b: 0 },
     pendiente: null,        // (control) { eid, tipo } esperando ack
     pendienteTimer: null,
     wakeLock: null,
-    ocultoDesde: 0,
-    buscandoDesde: 0        // (control) cuándo empezó a buscar el tablero por código
+    ocultoDesde: 0
   };
 
   const nombre = (e) => P.nombres[e] || (e === "a" ? "Equipo A" : "Equipo B");
@@ -159,81 +164,186 @@
   }
 
   /* ===================================================================
-     Conexión (Supabase Realtime)
+     Conexión (PeerJS)
      =================================================================== */
   async function conectarSala() {
     desconectarSala();
     P.conexion = "conectando";
     actualizarConexion();
 
-    let lib;
+    let Peer;
     try {
-      lib = await cargarLib("supabase");
+      Peer = await cargarLib("Peer");
     } catch (e) {
       P.conexion = "error";
       actualizarConexion();
+      programarReintento();
       return;
     }
     if (!P.rol) return;   // salió mientras cargaba
 
-    if (!P.client) {
-      P.client = lib.createClient(SUPA_URL, SUPA_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-      });
-    }
+    const esTablero = P.rol === "tablero";
+    // el tablero ocupa el id del código; cada control, uno propio al azar
+    const id = esTablero ? PREFIJO + P.id : `${PREFIJO}${P.id}-${nuevoId()}`;
+    const peer = new Peer(id, esTablero ? { debug: 0, token: P.token } : { debug: 0 });
+    P.peer = peer;
 
-    const canal = P.client.channel(`padel-${P.id}`, {
-      config: { broadcast: { self: false }, presence: { key: `${P.rol}-${nuevoId()}` } }
-    });
-    canal
-      .on("broadcast", { event: "punto" },    (m) => alRecibir("punto", m.payload || {}))
-      .on("broadcast", { event: "deshacer" }, (m) => alRecibir("deshacer", m.payload || {}))
-      .on("broadcast", { event: "pedir" },    (m) => alRecibir("pedir", m.payload || {}))
-      .on("broadcast", { event: "estado" },   (m) => alRecibir("estado", m.payload || {}))
-      .on("presence",  { event: "sync" },     () => alPresencia(canal.presenceState()));
-
-    P.canal = canal;
-    canal.subscribe(async (status) => {
-      if (P.canal !== canal) return;   // canal viejo (hubo reconexión)
-      if (status === "SUBSCRIBED") {
-        P.conexion = "ok";
-        try { await canal.track({ rol: P.rol, equipo: P.equipo }); } catch (e) { /* reintenta solo */ }
-        if (P.rol === "tablero") difundir();
-        else enviar("pedir", {});
-      } else {
-        P.conexion = status === "CLOSED" ? "conectando" : "error";
-      }
+    peer.on("open", () => {
+      if (P.peer !== peer) return;
+      P.conexion = "ok";
+      if (!esTablero) conectarAlTablero();
       actualizarConexion();
     });
+    peer.on("connection", (conn) => {
+      if (P.peer !== peer || P.rol !== "tablero") return conn.close();
+      recibirControl(conn);
+    });
+    peer.on("disconnected", () => {
+      // se cortó el servidor: las conexiones directas siguen andando
+      if (P.peer !== peer || peer.destroyed) return;
+      P.conexion = "conectando";
+      actualizarConexion();
+      programarReintento();
+    });
+    peer.on("error", (err) => {
+      if (P.peer !== peer) return;
+      const tipo = err && err.type;
+      if (tipo === "peer-unavailable") {
+        // (control) no hay ningún tablero abierto con ese código
+        P.tableroOnline = false;
+        P.sinTablero = true;
+        actualizarConexion();
+        programarReintento();
+        return;
+      }
+      if (tipo === "unavailable-id" && esTablero && !P.puntos) {
+        // otro partido ya usa ese código y nadie lo conoce todavía: se elige otro
+        P.id = nuevoCodigo();
+        P.token = nuevoId() + nuevoId();
+        guardarPartido();
+        cambiarUrl(`?tablero=${P.id}`);
+        conectarSala();
+        return;
+      }
+      // red, servidor caído, o el código todavía figura de la sesión anterior
+      P.conexion = "error";
+      actualizarConexion();
+      programarReintento();
+    });
+  }
+
+  /** Reintenta lo que falte: el servidor, o (control) la conexión con el tablero. */
+  function programarReintento() {
+    clearTimeout(P.reintento);
+    P.reintento = setTimeout(() => {
+      if (!P.rol) return;
+      const peer = P.peer;
+      if (!peer || peer.destroyed || (P.conexion === "error" && !peer.open)) return conectarSala();
+      if (peer.disconnected) {
+        try { peer.reconnect(); } catch (e) { return conectarSala(); }
+      }
+      if (P.rol === "control" && !P.tableroOnline) conectarAlTablero();
+    }, REINTENTO_MS);
   }
 
   function desconectarSala() {
-    if (P.canal && P.client) P.client.removeChannel(P.canal);
-    P.canal = null;
+    clearTimeout(P.reintento);
+    if (P.peer) {
+      try { P.peer.destroy(); } catch (e) { /* ya cerrado */ }
+    }
+    P.peer = null;
+    P.conn = null;
+    P.conns = new Map();
     P.conexion = "off";
     P.tableroOnline = false;
+    P.sinTablero = false;
     P.controles = { a: 0, b: 0 };
   }
 
+  /* ---------- (control) conexión directa con el tablero ---------- */
+  function conectarAlTablero() {
+    if (!P.peer || !P.peer.open) return;
+    const vieja = P.conn;
+    P.conn = null;   // primero se suelta, así su "close" no dispara otro reintento
+    if (vieja) {
+      try { vieja.close(); } catch (e) { /* ya cerrada */ }
+    }
+    const conn = P.peer.connect(PREFIJO + P.id, { reliable: true });
+    P.conn = conn;
+    conn.on("open", () => {
+      if (P.conn !== conn) return;
+      P.tableroOnline = true;
+      P.sinTablero = false;
+      conn.send({ t: "hola", equipo: P.equipo });   // el tablero contesta con el estado
+      actualizarConexion();
+    });
+    conn.on("data", (d) => {
+      if (P.conn !== conn || !d || d.t !== "estado") return;
+      alRecibir("estado", d);
+    });
+    const caida = () => {
+      if (P.conn !== conn) return;
+      P.conn = null;
+      P.tableroOnline = false;
+      P.sinTablero = true;   // el tablero se cerró o se cortó
+      actualizarConexion();
+      programarReintento();
+    };
+    conn.on("close", caida);
+    conn.on("error", caida);
+  }
+
   function enviar(evento, payload) {
-    if (!P.canal || P.conexion !== "ok") return false;
-    P.canal.send({ type: "broadcast", event: evento, payload });
-    return true;
+    if (P.rol !== "control" || !P.conn || !P.conn.open) return false;
+    try {
+      P.conn.send({ t: evento, ...payload });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /* ---------- (tablero) controles conectados ---------- */
+  function recibirControl(conn) {
+    conn.on("data", (d) => {
+      if (!d || typeof d !== "object") return;
+      if (d.t === "hola") {
+        P.conns.set(conn, EQUIPOS.includes(d.equipo) ? d.equipo : null);
+        contarControles();
+        mandarEstado(conn);
+      } else if (d.t === "pedir") {
+        mandarEstado(conn);
+      } else if ((d.t === "punto" || d.t === "deshacer") && P.conns.get(conn)) {
+        // vale el equipo con el que se presentó, no el que diga el mensaje
+        alRecibir(d.t, { eid: d.eid, equipo: P.conns.get(conn) });
+      }
+    });
+    const caida = () => {
+      P.conns.delete(conn);
+      contarControles();
+    };
+    conn.on("close", caida);
+    conn.on("error", caida);
+  }
+
+  function contarControles() {
+    const equipos = [...P.conns.values()];
+    P.controles = {
+      a: equipos.filter((e) => e === "a").length,
+      b: equipos.filter((e) => e === "b").length
+    };
+    actualizarConexion();
+  }
+
+  function mandarEstado(conn, ack) {
+    try {
+      if (conn.open) conn.send({ t: "estado", nombres: P.nombres, puntos: P.puntos, ack: ack || null });
+    } catch (e) { /* se cayó: la saca el evento "close" */ }
   }
 
   /** (tablero) Manda el partido completo a todos los controles. */
   function difundir(ack) {
-    enviar("estado", { nombres: P.nombres, puntos: P.puntos, ack: ack || null });
-  }
-
-  function alPresencia(estadoPresencia) {
-    const metas = Object.values(estadoPresencia).flat();
-    P.tableroOnline = metas.some((m) => m.rol === "tablero");
-    P.controles = {
-      a: metas.filter((m) => m.rol === "control" && m.equipo === "a").length,
-      b: metas.filter((m) => m.rol === "control" && m.equipo === "b").length
-    };
-    actualizarConexion();
+    P.conns.forEach((equipo, conn) => mandarEstado(conn, ack));
   }
 
   function alRecibir(evento, datos) {
@@ -275,7 +385,7 @@
       });
       el("padel-links-aviso").textContent = P.conexion === "ok"
         ? ""
-        : "El tablero no está conectado: los links van a andar cuando se conecte.";
+        : "El tablero no está conectado: el código y los links van a andar cuando se conecte.";
     } else if (P.rol === "control") {
       if (P.equipo) renderControl();
       else renderUnirme();
@@ -317,6 +427,7 @@
     leerNombres();
     guardarLS(CLAVE_PREFS, { nombres: P.nombres });
     P.id = nuevoCodigo();
+    P.token = nuevoId() + nuevoId();
     P.puntos = "";
     P.procesados = [];
     P.setDescartado = 0;
@@ -333,6 +444,7 @@
 
   function cargarPartido(g) {
     P.id = g.id;
+    P.token = g.token || nuevoId() + nuevoId();
     P.nombres = g.nombres || { a: "", b: "" };
     P.puntos = g.puntos || "";
     P.procesados = g.procesados || [];
@@ -341,7 +453,8 @@
 
   function guardarPartido() {
     guardarLS(CLAVE_PARTIDO, {
-      id: P.id, nombres: P.nombres, puntos: P.puntos, procesados: P.procesados, setDescartado: P.setDescartado
+      id: P.id, token: P.token, nombres: P.nombres, puntos: P.puntos,
+      procesados: P.procesados, setDescartado: P.setDescartado
     });
   }
 
@@ -518,11 +631,10 @@
       return;
     }
     if (P.rol === "control" && P.id === codigo) {
-      // ya conectado a esa sala: vuelve a preguntar por el tablero
-      P.buscandoDesde = Date.now();
-      enviar("pedir", {});
+      // ya buscando esa sala: reintenta ya
+      P.sinTablero = false;
+      if (!enviar("pedir", {})) conectarAlTablero();
       renderUnirme();
-      setTimeout(renderUnirme, 3100);
       return;
     }
     P.rol = "control";
@@ -531,11 +643,9 @@
     P.puntos = "";
     P.nombres = { a: "", b: "" };
     P.recibido = false;
-    P.buscandoDesde = Date.now();
     el("padel-codigo-inp").blur();
     conectarSala();
     renderUnirme();
-    setTimeout(renderUnirme, 3100);   // para mostrar "no hay tablero" si no aparece
   }
 
   function renderUnirme() {
@@ -546,9 +656,8 @@
     if (buscando) {
       if (P.conexion === "error") { txt = "Sin conexión a internet"; clase = "is-bad"; }
       else if (P.recibido) { txt = `✓ Partido ${codigoLindo(P.id)} encontrado`; clase = "is-ok"; }
-      else if (P.conexion === "ok" && !P.tableroOnline && Date.now() - P.buscandoDesde > 3000) {
-        txt = "No hay ningún tablero abierto con ese código"; clase = "is-bad";
-      } else txt = "Buscando el tablero…";
+      else if (P.sinTablero) { txt = "No hay ningún tablero abierto con ese código"; clase = "is-bad"; }
+      else txt = "Buscando el tablero…";
     }
     estadoEl.textContent = txt;
     estadoEl.className = `padel-join-estado ${clase}`;
@@ -562,7 +671,7 @@
   /** Elegido el equipo, pasa a la pantalla de marcar (y queda en la URL por si recarga). */
   function elegirEquipo(e) {
     P.equipo = e;
-    if (P.canal && P.conexion === "ok") P.canal.track({ rol: "control", equipo: e }).catch(() => {});
+    enviar("hola", { equipo: e });
     cambiarUrl(`?padel=${P.id}&equipo=${e}`);
     renderControl();
     mostrarPantalla("padelRemote");
@@ -596,7 +705,7 @@
 
   function controlEnviar(tipo) {
     if (P.pendiente) return;
-    if (P.conexion !== "ok" || !P.tableroOnline) {
+    if (!P.tableroOnline) {
       mostrarToast("El tablero no está conectado");
       return;
     }
@@ -633,7 +742,7 @@
 
   function renderControl() {
     const r = calcularPadel(P.puntos);
-    const listo = P.conexion === "ok" && P.tableroOnline && P.recibido;
+    const listo = P.tableroOnline && P.recibido;
 
     EQUIPOS.forEach((e) => {
       el(`padel-mini-${e}`).classList.toggle("is-mine", e === P.equipo);
@@ -646,12 +755,12 @@
 
     const estadoEl = el("padel-remote-estado");
     let txt = "Conectando…";
-    if (P.conexion === "error") txt = "○ Sin conexión a internet";
-    else if (P.conexion === "ok" && !P.tableroOnline) txt = "○ El tablero no está abierto";
-    else if (listo) txt = "● Conectado al tablero";
+    if (listo) txt = "● Conectado al tablero";
+    else if (P.conexion === "error") txt = "○ Sin conexión";
+    else if (P.sinTablero) txt = "○ El tablero no está abierto";
     estadoEl.textContent = txt;
     estadoEl.classList.toggle("is-ok", listo);
-    estadoEl.classList.toggle("is-bad", P.conexion === "error" || (P.conexion === "ok" && !P.tableroOnline));
+    estadoEl.classList.toggle("is-bad", !listo && (P.conexion === "error" || P.sinTablero));
 
     const boton = el("padel-remote-punto");
     boton.classList.toggle("team-b", P.equipo === "b");
@@ -714,9 +823,9 @@
       return;
     }
     if (P.rol === "tablero") pedirWakeLock();
-    if (Date.now() - P.ocultoDesde > 3000 || P.conexion !== "ok") conectarSala();
-    else if (P.rol === "tablero") difundir();
-    else enviar("pedir", {});
+    if (Date.now() - P.ocultoDesde > 3000 || !P.peer || P.peer.destroyed) return conectarSala();
+    if (P.rol === "tablero") difundir();
+    else if (!enviar("pedir", {})) conectarAlTablero();
   });
 
   /* ---------- Arranque: ¿se abrió desde un link? ---------- */
