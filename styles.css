@@ -129,9 +129,19 @@ body {
   padding: inherit;
   display: none;
   flex-direction: column;
-  justify-content: center;
   gap: 18px;
+  /* si el contenido no entra (iPhone SE/8), se scrollea en vez de cortarse */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
+.screen::-webkit-scrollbar { display: none; }
+
+/* centrado vertical con márgenes auto en vez de justify-content:center:
+   cuando el contenido es más alto que la pantalla, los márgenes valen 0 y
+   arranca arriba (center lo recortaba por los dos lados, sin scroll posible) */
+.screen > :first-child { margin-top: auto; }
+.screen > :last-child  { margin-bottom: auto; }
 
 .screen.is-active {
   display: flex;
@@ -263,7 +273,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 4px;
+  padding: 5px 4px;
   line-height: 1.15;
 }
 .seg-ico { font-size: 1.05rem; line-height: 1.1; }
@@ -307,6 +317,8 @@ body {
   min-height: 1.2em;
   text-align: center;
 }
+/* sin aviso no ocupa lugar: dejaba ~30 px vacíos al pie de la tarjeta */
+.hint:empty { display: none; }
 
 /* etiqueta de versión (da sensación de app cuidada) */
 .version {
@@ -502,6 +514,7 @@ body {
   padding: 0;
   justify-content: stretch;
   gap: 0;
+  overflow: hidden;   /* zona de toques: nunca debe scrollear */
 }
 
 .clock-wrap {
@@ -601,6 +614,38 @@ body {
   transition: transform 0.12s var(--ease), background 0.2s;
 }
 .clock-ctrl:active { transform: scale(0.9); background: var(--accent); color: #04130a; }
+
+/* ===================================================================
+   Pantallas bajas (iPhone SE/8, o cualquier iPhone dentro de Safari con
+   las barras a la vista): se compacta SÓLO la configuración, la única
+   pantalla que no entra, para que el botón principal se vea sin
+   scrollear. Lo que igual no entre, se scrollea (ver .screen).
+   =================================================================== */
+@media (max-height: 900px), (min-width: 480px) {
+  /* el contenido de la config mide ~844 px (~861 en escritorio, título más
+     grande): con estos espacios entra en 844 px de alto y en el marco de
+     escritorio, que nunca pasa de 880 px, sin scrollear */
+  #screen-config { gap: 12px; }
+  #screen-config .config-card { gap: 12px; }
+  #screen-config .btn { padding: 15px 24px; }
+}
+@media (max-height: 760px) {
+  #screen-config {
+    padding-top: max(env(safe-area-inset-top), 16px);
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  }
+  #screen-config .brand { margin-bottom: 0; }
+  #screen-config .brand-emoji { font-size: 2.4rem; margin-bottom: 4px; }
+  #screen-config .title { font-size: 2.4rem; }
+  #screen-config .subtitle { margin-top: 6px; }
+  #screen-config .config-card { padding: 18px; }
+  #screen-config .step-btn { height: 46px; }
+  #screen-config .stepper input { padding: 8px 0; }
+}
+@media (max-height: 600px) {
+  #screen-config .brand-emoji { display: none; }
+  #screen-config .title { font-size: 2rem; }
+}
 
 /* respeta a quienes prefieren menos animaciones */
 @media (prefers-reduced-motion: reduce) {

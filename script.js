@@ -22,7 +22,7 @@
 "use strict";
 
 /* Versión de la app (fuente única de verdad). */
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.6.1";
 
 /* ---------- Modo HOMBRES: jugadores de fútbol famosos ---------- */
 const FUTBOLISTAS = [
