@@ -14,12 +14,15 @@
    Modos de juego:
      - "hombres": futbolistas famosos (la versión clásica de fútbol).
      - "mixto":   cultura general argentina, divertida, para grupos mixtos.
+     - "numero":  sin impostores. "Confirmar" sortea un número y quién lo
+                  adivina; el resto lo ve, el que adivina no, y lo tiene que
+                  sacar (la app le dice "más alto" / "más bajo").
    =================================================================== */
 
 "use strict";
 
 /* Versión de la app (fuente única de verdad). */
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.6.0";
 
 /* ---------- Modo HOMBRES: jugadores de fútbol famosos ---------- */
 const FUTBOLISTAS = [
@@ -101,6 +104,12 @@ const MODOS = {
     copiar:    "Copiar lista de palabras",
     unidad:    "palabras",
     lista:     MIXTO
+  },
+  numero: {
+    etiqueta:  "Número 🔢",
+    subtitulo: "Adiviná el número",
+    boton:     "Confirmar",
+    lista:     null          // no usa palabras: sortea un número entre 1 y numeroMax
   }
 };
 
@@ -112,7 +121,15 @@ const estado = {
   palabra: null,           // la palabra/jugador elegido para toda la ronda
   rolesImpostor: [],       // array de booleanos: true = ese participante es impostor
   jugadorActual: 0,        // índice 0-based del participante con el celu
-  sonido: true
+  sonido: true,
+
+  // modo Número
+  numeroMax: 100,          // se sortea entre 1 y este valor
+  numero: null,            // el número secreto de la ronda
+  adivina: null,           // índice 0-based del jugador que adivina
+  ronda: 0,
+  intentos: 0,
+  acertado: false
 };
 
 /** Devuelve la configuración del modo activo. */
@@ -205,7 +222,10 @@ const pantallas = {
   reveal:       document.getElementById("screen-reveal"),
   final:        document.getElementById("screen-final"),
   clockConfig:  document.getElementById("screen-clock-config"),
-  clock:        document.getElementById("screen-clock")
+  clock:        document.getElementById("screen-clock"),
+  numHide:      document.getElementById("screen-num-hide"),
+  numShow:      document.getElementById("screen-num-show"),
+  numGuess:     document.getElementById("screen-num-guess")
 };
 
 /** Muestra una pantalla y anima la salida de la anterior. */
@@ -244,7 +264,11 @@ const revealEyebrow = document.getElementById("reveal-eyebrow");
 
 const subtitle   = document.getElementById("app-subtitle");
 const btnCopy    = document.getElementById("btn-copy");
+const btnGenerate = document.getElementById("btn-generate");
 const segButtons = document.querySelectorAll(".seg-btn[data-modo]");
+const rangoButtons = document.querySelectorAll(".seg-btn[data-rango]");
+const fieldImpostors = document.getElementById("field-impostors");
+const fieldRango     = document.getElementById("field-rango");
 
 /* ===================================================================
    Configuración: steppers + / −
@@ -271,9 +295,10 @@ document.querySelectorAll(".step-btn").forEach((btn) => {
 function validarConfig() {
   const jugadores = parseInt(inpPlayers.value, 10);
   const impostores = parseInt(inpImpostors.value, 10);
-  const btn = document.getElementById("btn-generate");
+  const btn = btnGenerate;
 
-  if (impostores >= jugadores) {
+  // en modo Número no hay impostores: alcanza con 2+ jugadores (mínimo del stepper)
+  if (estado.modo !== "numero" && impostores >= jugadores) {
     configHint.textContent = "Tiene que haber al menos un jugador no impostor.";
     btn.disabled = true;
     btn.style.opacity = "0.5";
@@ -301,9 +326,19 @@ segButtons.forEach((btn) => {
   });
 });
 
+/* Rango del modo Número (10 / 50 / 100 / 1000) */
+rangoButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    estado.numeroMax = parseInt(btn.dataset.rango, 10);
+    actualizarModo();
+    sonar("click");
+  });
+});
+
 /**
  * Refresca todos los textos que dependen del modo activo:
- * botones del selector, subtítulo, botón de copiar y las etiquetas de versión.
+ * botones del selector, subtítulo, botón de copiar, campos visibles
+ * y las etiquetas de versión.
  */
 function actualizarModo() {
   const modo = modoActual();
@@ -314,12 +349,29 @@ function actualizarModo() {
     btn.setAttribute("aria-selected", btn.dataset.modo === estado.modo ? "true" : "false");
   });
 
-  if (subtitle) subtitle.textContent = modo.subtitulo;
-  if (btnCopy)  btnCopy.textContent = modo.copiar;
+  const esNumero = estado.modo === "numero";
 
-  document.querySelectorAll(".version").forEach((el) => {
-    el.textContent = `v${APP_VERSION} · ${modo.lista.length} ${modo.unidad}`;
+  if (subtitle) subtitle.textContent = modo.subtitulo;
+  if (btnCopy) {
+    btnCopy.hidden = esNumero;
+    if (modo.copiar) btnCopy.textContent = modo.copiar;
+  }
+  btnGenerate.textContent = modo.boton || "Generar jugador";
+  fieldImpostors.hidden = esNumero;
+  fieldRango.hidden = !esNumero;
+
+  rangoButtons.forEach((btn) => {
+    btn.classList.toggle("is-selected", parseInt(btn.dataset.rango, 10) === estado.numeroMax);
   });
+
+  const detalle = esNumero
+    ? `del 1 al ${estado.numeroMax}`
+    : `${modo.lista.length} ${modo.unidad}`;
+  document.querySelectorAll(".version").forEach((el) => {
+    el.textContent = `v${APP_VERSION} · ${detalle}`;
+  });
+
+  validarConfig();
 }
 
 /* ===================================================================
@@ -327,6 +379,13 @@ function actualizarModo() {
    =================================================================== */
 function iniciarPartida() {
   if (!validarConfig()) return;
+  if (estado.modo === "numero") {
+    estado.totalJugadores = parseInt(inpPlayers.value, 10);
+    estado.sonido = inpSound.checked;
+    estado.ronda = 0;
+    nuevaRondaNumero();
+    return;
+  }
 
   estado.totalJugadores = parseInt(inpPlayers.value, 10);
   estado.totalImpostores = parseInt(inpImpostors.value, 10);
@@ -468,6 +527,127 @@ actualizarModo();
 
 /* Validación inicial al cargar */
 validarConfig();
+
+/* ===================================================================
+   MODO NÚMERO
+   -------------------------------------------------------------------
+   1. "Confirmar" sortea un número (1..numeroMax) y quién lo adivina.
+   2. Pantalla A: dice quién adivina; esa persona no mira.
+   3. Pantalla B: el resto ve el número.
+   4. Pantalla C: el que adivina prueba números; la app responde
+      "más alto" / "más bajo" hasta que acierta.
+   =================================================================== */
+const numRound     = document.getElementById("num-round");
+const numWho       = document.getElementById("num-who");
+const numWhoShow   = document.getElementById("num-who-show");
+const numWhoGuess  = document.getElementById("num-who-guess");
+const numValue     = document.getElementById("num-value");
+const numRange     = document.getElementById("num-range");
+const numForm      = document.getElementById("num-form");
+const inpGuess     = document.getElementById("inp-guess");
+const btnGuess     = document.getElementById("btn-guess");
+const numFeedback  = document.getElementById("num-feedback");
+const numTries     = document.getElementById("num-tries");
+const btnNumAgain  = document.getElementById("btn-num-again");
+
+/** Elige un entero entre 0 y max-1 distinto de "anterior" (si se puede). */
+function aleatorioDistinto(max, anterior) {
+  let n;
+  do {
+    n = aleatorio(max);
+  } while (n === anterior && max > 1);
+  return n;
+}
+
+/** Sortea número y adivinador nuevos (sin repetir los de la ronda anterior). */
+function nuevaRondaNumero() {
+  const anterior = estado.numero === null ? null : estado.numero - 1;
+  estado.numero = aleatorioDistinto(estado.numeroMax, anterior) + 1;
+  estado.adivina = aleatorioDistinto(estado.totalJugadores, estado.adivina);
+  estado.ronda++;
+  estado.intentos = 0;
+  estado.acertado = false;
+
+  const quien = `Jugador ${estado.adivina + 1}`;
+  numRound.textContent = `Ronda ${estado.ronda}`;
+  numWho.textContent = quien;
+  numWhoShow.textContent = `🙈 ${quien} no mira`;
+  numWhoGuess.textContent = quien;
+  numValue.textContent = estado.numero;
+
+  mostrarPantalla("numHide");
+  sonar("click");
+}
+
+/** Muestra el número al resto del grupo. */
+function mostrarNumero() {
+  mostrarPantalla("numShow");
+  sonar("normal");
+}
+
+/** Oculta el número y deja la pantalla lista para que adivine. */
+function prepararAdivinanza() {
+  numRange.textContent = `Entre 1 y ${estado.numeroMax}`;
+  inpGuess.max = estado.numeroMax;
+  inpGuess.value = "";
+  inpGuess.disabled = false;
+  btnGuess.disabled = false;
+  numFeedback.textContent = "";
+  numFeedback.className = "guess-feedback";
+  numTries.textContent = "Intentos: 0";
+  btnNumAgain.classList.replace("btn-primary", "btn-ghost");
+
+  mostrarPantalla("numGuess");
+  inpGuess.focus();
+  sonar("click");
+}
+
+/** Compara el intento con el número secreto. */
+function probarNumero(e) {
+  e.preventDefault();
+  if (estado.acertado) return;
+
+  const valor = Number(inpGuess.value);
+  if (!Number.isInteger(valor) || valor < 1 || valor > estado.numeroMax) {
+    numFeedback.textContent = `Poné un número entero entre 1 y ${estado.numeroMax}.`;
+    numFeedback.className = "guess-feedback is-err";
+    inpGuess.focus();
+    return;
+  }
+
+  estado.intentos++;
+  numTries.textContent = `Intentos: ${estado.intentos}`;
+
+  if (valor === estado.numero) {
+    estado.acertado = true;
+    numFeedback.textContent = `🎉 ¡Correcto! Era el ${estado.numero}`;
+    numFeedback.className = "guess-feedback is-ok";
+    inpGuess.disabled = true;
+    btnGuess.disabled = true;
+    btnNumAgain.classList.replace("btn-ghost", "btn-primary");
+    inpGuess.blur();
+    sonar("normal");
+    return;
+  }
+
+  numFeedback.textContent = valor < estado.numero
+    ? `⬆️ Más alto que ${valor}`
+    : `⬇️ Más bajo que ${valor}`;
+  numFeedback.className = "guess-feedback";
+  inpGuess.value = "";
+  inpGuess.focus();
+  sonar("click");
+}
+
+document.getElementById("btn-num-show").addEventListener("click", mostrarNumero);
+document.getElementById("btn-num-hide").addEventListener("click", prepararAdivinanza);
+numForm.addEventListener("submit", probarNumero);
+btnNumAgain.addEventListener("click", nuevaRondaNumero);
+document.getElementById("btn-num-config").addEventListener("click", () => {
+  inpGuess.blur();
+  mostrarPantalla("config");
+  sonar("click");
+});
 
 /* ===================================================================
    RELOJ DE AJEDREZ (modo extra)

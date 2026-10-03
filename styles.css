@@ -27,6 +27,9 @@
 
 html, body { height: 100%; }
 
+/* el atributo hidden gana siempre (si no, .field{display:flex} lo pisa) */
+[hidden] { display: none !important; }
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background: var(--bg);
@@ -254,6 +257,17 @@ body {
   transition: transform 0.12s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
 }
 .seg-btn:active { transform: scale(0.96); }
+/* selector de modo con 3 opciones: emoji arriba, texto abajo para que entre en 375px */
+.mode-seg { grid-template-columns: repeat(3, 1fr); }
+.mode-seg .seg-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  line-height: 1.15;
+}
+.seg-ico { font-size: 1.05rem; line-height: 1.1; }
+
 .seg-btn.is-selected {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #04130a;
@@ -437,11 +451,51 @@ body {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ===================================================================
+   Modo Número
+   =================================================================== */
+.num-who { font-size: clamp(2rem, 10vw, 2.8rem); margin: 4px 0 2px; color: var(--accent); }
+.num-value { font-size: clamp(4.4rem, 26vw, 7rem); font-variant-numeric: tabular-nums; }
+
+.guess-card { text-align: center; padding: 30px 22px; }
+.guess-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 20px;
+}
+.guess-input {
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1.8rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 10px 0;
+  -moz-appearance: textfield;
+  -webkit-user-select: text;   /* el body tiene user-select:none; iOS no deja tipear sin esto */
+  user-select: text;
+}
+.guess-input::-webkit-outer-spin-button,
+.guess-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.guess-input:focus { outline: none; border-color: var(--accent); }
+.guess-input:disabled { opacity: 0.5; }
+.guess-form .btn { padding: 14px 22px; }
+.guess-form .btn:disabled { opacity: 0.5; }
+
+.guess-feedback { margin-top: 16px; min-height: 1.4em; font-size: 1.3rem; font-weight: 800; }
+.guess-feedback.is-ok { color: var(--accent); }
+.guess-feedback.is-err { color: var(--danger); font-size: 0.95rem; font-weight: 600; }
+.guess-tries { margin-top: 6px; color: var(--text-soft); font-size: 0.9rem; font-weight: 600; }
+
+/* ===================================================================
    Reloj de ajedrez
    =================================================================== */
 
 /* presets rápidos: 4 columnas en vez de 2 */
-.clock-presets { grid-template-columns: repeat(4, 1fr); }
+.clock-presets, .rango-presets { grid-template-columns: repeat(4, 1fr); }
 
 /* la pantalla del reloj ocupa todo el alto, sin padding */
 #screen-clock {

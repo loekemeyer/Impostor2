@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#0a0e12" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>El Impostor 🕵️‍♂️ · Fútbol o Mixto</title>
-  <link rel="stylesheet" href="styles.css?v=1.5.0" />
+  <title>El Impostor 🕵️‍♂️ · Fútbol, Mixto o Número</title>
+  <link rel="stylesheet" href="styles.css?v=1.6.0" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -34,9 +34,10 @@
       <div class="card config-card">
         <div class="field">
           <span class="field-label">Modo de juego</span>
-          <div class="segmented" role="tablist" aria-label="Modo de juego">
-            <button type="button" class="seg-btn" role="tab" data-modo="hombres">Hombres ⚽</button>
-            <button type="button" class="seg-btn" role="tab" data-modo="mixto">Mixto 🎉</button>
+          <div class="segmented mode-seg" role="tablist" aria-label="Modo de juego">
+            <button type="button" class="seg-btn" role="tab" data-modo="hombres"><span class="seg-ico">⚽</span>Hombres</button>
+            <button type="button" class="seg-btn" role="tab" data-modo="mixto"><span class="seg-ico">🎉</span>Mixto</button>
+            <button type="button" class="seg-btn" role="tab" data-modo="numero"><span class="seg-ico">🔢</span>Número</button>
           </div>
         </div>
 
@@ -49,7 +50,7 @@
           </div>
         </label>
 
-        <label class="field">
+        <label class="field" id="field-impostors">
           <span class="field-label">Cantidad de impostores</span>
           <div class="stepper">
             <button type="button" class="step-btn" data-step="impostors" data-dir="-1" aria-label="Menos impostores">−</button>
@@ -57,6 +58,17 @@
             <button type="button" class="step-btn" data-step="impostors" data-dir="1" aria-label="Más impostores">+</button>
           </div>
         </label>
+
+        <!-- sólo en modo Número: hasta qué número se sortea -->
+        <div class="field" id="field-rango" hidden>
+          <span class="field-label">Número entre 1 y…</span>
+          <div class="segmented rango-presets" role="group" aria-label="Número máximo">
+            <button type="button" class="seg-btn" data-rango="10">10</button>
+            <button type="button" class="seg-btn" data-rango="50">50</button>
+            <button type="button" class="seg-btn" data-rango="100">100</button>
+            <button type="button" class="seg-btn" data-rango="1000">1000</button>
+          </div>
+        </div>
 
         <label class="toggle-row">
           <span class="field-label">Sonidos</span>
@@ -118,6 +130,46 @@
       <p class="version">v0.0.0</p>
     </section>
 
+    <!-- ============ MODO NÚMERO · A: QUIÉN ADIVINA ============ -->
+    <section class="screen" id="screen-num-hide" aria-label="Quién adivina">
+      <p class="counter" id="num-round">Ronda 1</p>
+      <div class="card handoff-card">
+        <div class="handoff-emoji">🙈</div>
+        <p class="handoff-sub">Adivina</p>
+        <h2 class="handoff-title num-who" id="num-who">Jugador 1</h2>
+        <p class="handoff-sub">No tiene que mirar la pantalla. El resto, tocá «Mostrar número».</p>
+      </div>
+      <button class="btn btn-primary" id="btn-num-show">Mostrar número</button>
+    </section>
+
+    <!-- ============ MODO NÚMERO · B: EL NÚMERO (para todos menos el que adivina) ============ -->
+    <section class="screen" id="screen-num-show" aria-label="El número">
+      <p class="counter" id="num-who-show">🙈 Jugador 1 no mira</p>
+      <div class="card reveal-card">
+        <p class="reveal-eyebrow">El número es</p>
+        <p class="player-name num-value" id="num-value">—</p>
+        <p class="reveal-foot">Memorícenlo y pásenle el celu al que adivina.</p>
+      </div>
+      <button class="btn btn-primary" id="btn-num-hide">Ocultar y adivinar</button>
+    </section>
+
+    <!-- ============ MODO NÚMERO · C: ADIVINAR ============ -->
+    <section class="screen" id="screen-num-guess" aria-label="Adiviná el número">
+      <p class="counter" id="num-who-guess">Jugador 1</p>
+      <div class="card guess-card">
+        <h2 class="handoff-title">¿Qué número es?</h2>
+        <p class="handoff-sub" id="num-range">Entre 1 y 100</p>
+        <form class="guess-form" id="num-form" autocomplete="off" novalidate>
+          <input type="number" id="inp-guess" class="guess-input" inputmode="numeric" min="1" max="100" placeholder="?" />
+          <button type="submit" class="btn btn-primary" id="btn-guess">Probar</button>
+        </form>
+        <p class="guess-feedback" id="num-feedback"></p>
+        <p class="guess-tries" id="num-tries">Intentos: 0</p>
+      </div>
+      <button class="btn btn-ghost" id="btn-num-again">Otra ronda</button>
+      <button class="btn btn-ghost" id="btn-num-config">Cambiar configuración</button>
+    </section>
+
     <!-- ============ PANTALLA 5: CONFIG DEL RELOJ DE AJEDREZ ============ -->
     <section class="screen" id="screen-clock-config" aria-label="Configurar reloj de ajedrez">
       <div class="brand">
@@ -176,6 +228,6 @@
 
   </main>
 
-  <script src="script.js?v=1.5.0" defer></script>
+  <script src="script.js?v=1.6.0" defer></script>
 </body>
 </html>
