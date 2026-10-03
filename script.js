@@ -22,7 +22,7 @@
 "use strict";
 
 /* Versión de la app (fuente única de verdad). */
-const APP_VERSION = "1.10.1";
+const APP_VERSION = "1.11.0";
 
 /* ---------- Modo HOMBRES: jugadores de fútbol famosos ---------- */
 const FUTBOLISTAS = [
@@ -279,6 +279,7 @@ document.querySelectorAll(".step-btn").forEach((btn) => {
     const dir = parseInt(btn.dataset.dir, 10); // 1 | -1
     const inputs = { players: inpPlayers, impostors: inpImpostors, minutes: inpMinutes };
     const input = inputs[campo];
+    if (!input) return;   // otros steppers (p. ej. la hora del pádel) tienen su propio manejo
 
     let valor = parseInt(input.value, 10) + dir;
     const min = parseInt(input.min, 10);
