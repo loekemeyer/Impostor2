@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>El Impostor 🕵️‍♂️ · Fútbol, Mixto o Número</title>
-  <link rel="stylesheet" href="styles.css?v=1.6.1" />
+  <link rel="stylesheet" href="styles.css?v=1.7.0" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -81,7 +81,10 @@
 
       <button class="btn btn-primary" id="btn-generate">Generar jugador</button>
       <button class="btn btn-ghost" id="btn-copy">Copiar lista de jugadores</button>
-      <button class="btn btn-ghost" id="btn-open-clock">♟️ Reloj de ajedrez</button>
+      <div class="extras-row">
+        <button class="btn btn-ghost" id="btn-open-clock">♟️ Reloj</button>
+        <button class="btn btn-ghost" id="btn-open-padel">🎾 Pádel</button>
+      </div>
 
       <p class="version" id="app-version">v0.0.0</p>
     </section>
@@ -226,8 +229,149 @@
       </div>
     </section>
 
+    <!-- ============ PÁDEL · CONFIGURACIÓN ============ -->
+    <section class="screen" id="screen-padel-config" aria-label="Configurar partido de pádel">
+      <div class="brand">
+        <div class="brand-emoji">🎾</div>
+        <h1 class="title">Pádel</h1>
+        <p class="subtitle">Contador</p>
+      </div>
+
+      <div class="card config-card">
+        <div class="field">
+          <span class="field-label">Equipos</span>
+          <div class="padel-nombres">
+            <input type="text" id="padel-nombre-a" class="text-input team-a" maxlength="18" placeholder="Equipo A" autocomplete="off" />
+            <input type="text" id="padel-nombre-b" class="text-input team-b" maxlength="18" placeholder="Equipo B" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Partido</span>
+          <div class="segmented" role="group" aria-label="Cantidad de sets">
+            <button type="button" class="seg-btn" data-padel-sets="1">1 set</button>
+            <button type="button" class="seg-btn" data-padel-sets="3">Al mejor de 3</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">En 40-40</span>
+          <div class="segmented" role="group" aria-label="Regla de iguales">
+            <button type="button" class="seg-btn" data-padel-oro="0">Ventaja</button>
+            <button type="button" class="seg-btn" data-padel-oro="1">Punto de oro</button>
+          </div>
+        </div>
+
+        <div class="field" id="padel-field-tercero">
+          <span class="field-label">Tercer set</span>
+          <div class="segmented" role="group" aria-label="Tercer set">
+            <button type="button" class="seg-btn" data-padel-super="0">Set completo</button>
+            <button type="button" class="seg-btn" data-padel-super="1">Súper tie-break</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-padel-continuar" hidden>Continuar partido</button>
+      <button class="btn btn-primary" id="btn-padel-empezar">Empezar partido</button>
+      <button class="btn btn-ghost" id="btn-padel-volver">Volver</button>
+    </section>
+
+    <!-- ============ PÁDEL · TABLERO (tocar una mitad = punto de ese equipo) ============ -->
+    <section class="screen" id="screen-padel" aria-label="Tablero de pádel">
+      <div class="padel-wrap">
+        <button type="button" class="padel-half team-a" id="padel-half-a">
+          <span class="padel-name" id="padel-name-a">Equipo A</span>
+          <span class="padel-pts" id="padel-pts-a">0</span>
+          <span class="padel-meta">Games <b id="padel-games-a">0</b> · Sets <b id="padel-sets-a">0</b></span>
+        </button>
+
+        <div class="padel-band">
+          <div class="padel-info">
+            <span class="padel-historial" id="padel-historial"></span>
+            <span class="padel-sub"><span class="padel-etiqueta" id="padel-etiqueta"></span><span class="padel-conexion" id="padel-conexion">📡 conectando…</span></span>
+          </div>
+          <div class="padel-controls">
+            <button type="button" class="clock-ctrl" id="padel-deshacer" aria-label="Deshacer último punto">↺</button>
+            <button type="button" class="clock-ctrl" id="padel-links" aria-label="Links para marcar desde otro celular">🔗</button>
+            <button type="button" class="clock-ctrl" id="padel-salir" aria-label="Salir">✕</button>
+          </div>
+        </div>
+
+        <button type="button" class="padel-half team-b" id="padel-half-b">
+          <span class="padel-name" id="padel-name-b">Equipo B</span>
+          <span class="padel-pts" id="padel-pts-b">0</span>
+          <span class="padel-meta">Games <b id="padel-games-b">0</b> · Sets <b id="padel-sets-b">0</b></span>
+        </button>
+
+        <!-- partido terminado -->
+        <div class="padel-fin" id="padel-fin" hidden>
+          <div class="card padel-fin-card">
+            <p class="final-emoji">🏆</p>
+            <h2 class="final-title" id="padel-fin-titulo">¡Ganó Equipo A!</h2>
+            <p class="padel-fin-sets" id="padel-fin-sets"></p>
+          </div>
+          <button class="btn btn-primary" id="btn-padel-nuevo">Nuevo partido</button>
+          <button class="btn btn-ghost" id="btn-padel-fin-deshacer">Deshacer último punto</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PÁDEL · LINKS PARA MARCAR DESDE OTRO CELULAR ============ -->
+    <section class="screen" id="screen-padel-links" aria-label="Links para marcar">
+      <div class="brand">
+        <h2 class="handoff-title">Marcar desde otro celu</h2>
+        <p class="handoff-sub">Pasale a cada equipo su link (o que escanee el QR). Desde ahí suma puntos para su equipo.</p>
+      </div>
+      <div class="padel-qrs">
+        <div class="card padel-qr-card team-a">
+          <p class="padel-qr-name" id="padel-qr-name-a">Equipo A</p>
+          <div class="padel-qr" id="padel-qr-a"></div>
+          <button class="btn btn-ghost padel-share" data-equipo="a">Enviar link</button>
+        </div>
+        <div class="card padel-qr-card team-b">
+          <p class="padel-qr-name" id="padel-qr-name-b">Equipo B</p>
+          <div class="padel-qr" id="padel-qr-b"></div>
+          <button class="btn btn-ghost padel-share" data-equipo="b">Enviar link</button>
+        </div>
+      </div>
+      <p class="hint" id="padel-links-aviso"></p>
+      <button class="btn btn-primary" id="btn-padel-links-volver">Volver al tablero</button>
+    </section>
+
+    <!-- ============ PÁDEL · CONTROL (el celular que abre el link) ============ -->
+    <section class="screen" id="screen-padel-remote" aria-label="Marcar puntos">
+      <div class="padel-remote-top">
+        <p class="padel-estado" id="padel-remote-estado">Conectando…</p>
+        <button type="button" class="link-btn" id="padel-remote-salir">Salir</button>
+      </div>
+
+      <div class="card padel-mini">
+        <div class="padel-mini-row team-a" id="padel-mini-a">
+          <span class="padel-mini-name" id="padel-mini-name-a">Equipo A</span>
+          <span class="padel-mini-sets" id="padel-mini-sets-a"></span>
+          <span class="padel-mini-games" id="padel-mini-games-a">0</span>
+          <span class="padel-mini-pts" id="padel-mini-pts-a">0</span>
+        </div>
+        <div class="padel-mini-row team-b" id="padel-mini-b">
+          <span class="padel-mini-name" id="padel-mini-name-b">Equipo B</span>
+          <span class="padel-mini-sets" id="padel-mini-sets-b"></span>
+          <span class="padel-mini-games" id="padel-mini-games-b">0</span>
+          <span class="padel-mini-pts" id="padel-mini-pts-b">0</span>
+        </div>
+        <p class="padel-etiqueta" id="padel-remote-etiqueta"></p>
+      </div>
+
+      <button type="button" class="padel-boton" id="padel-remote-punto" disabled>
+        <span class="padel-boton-mas">+1</span>
+        <span class="padel-boton-txt">Punto para <b id="padel-remote-equipo">Equipo A</b></span>
+      </button>
+      <button class="btn btn-ghost" id="padel-remote-deshacer" disabled>↺ Deshacer mi punto</button>
+    </section>
+
   </main>
 
-  <script src="script.js?v=1.6.1" defer></script>
+  <script src="script.js?v=1.7.0" defer></script>
+  <script src="padel-reglas.js?v=1.7.0" defer></script>
+  <script src="padel.js?v=1.7.0" defer></script>
 </body>
 </html>

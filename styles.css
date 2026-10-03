@@ -15,6 +15,10 @@
   --accent:     #22c55e;   /* verde cancha */
   --accent-2:   #16a34a;
   --danger:     #ef4444;   /* impostor */
+  --team-a:     #22c55e;   /* pádel: equipo A (verde) */
+  --team-a-2:   #16a34a;
+  --team-b:     #38bdf8;   /* pádel: equipo B (celeste) */
+  --team-b-2:   #0ea5e9;
   --danger-2:   #b91c1c;
   --radius:     22px;
   --radius-sm:  14px;
@@ -617,35 +621,285 @@ body {
 
 /* ===================================================================
    Pantallas bajas (iPhone SE/8, o cualquier iPhone dentro de Safari con
-   las barras a la vista): se compacta SÓLO la configuración, la única
-   pantalla que no entra, para que el botón principal se vea sin
-   scrollear. Lo que igual no entre, se scrollea (ver .screen).
+   las barras a la vista): se compactan SÓLO las dos configuraciones
+   (Impostor y Pádel), las únicas pantallas que no entran, para que el
+   botón principal se vea sin scrollear. Lo que igual no entre, se
+   scrollea (ver .screen).
    =================================================================== */
 @media (max-height: 900px), (min-width: 480px) {
   /* el contenido de la config mide ~844 px (~861 en escritorio, título más
      grande): con estos espacios entra en 844 px de alto y en el marco de
      escritorio, que nunca pasa de 880 px, sin scrollear */
-  #screen-config { gap: 12px; }
-  #screen-config .config-card { gap: 12px; }
-  #screen-config .btn { padding: 15px 24px; }
+  #screen-config,
+  #screen-padel-config { gap: 12px; }
+  #screen-config .config-card,
+  #screen-padel-config .config-card { gap: 12px; }
+  #screen-config .btn,
+  #screen-padel-config .btn { padding: 15px 24px; }
 }
 @media (max-height: 760px) {
-  #screen-config {
+  #screen-config,
+  #screen-padel-config {
     padding-top: max(env(safe-area-inset-top), 16px);
     padding-bottom: max(env(safe-area-inset-bottom), 16px);
   }
-  #screen-config .brand { margin-bottom: 0; }
-  #screen-config .brand-emoji { font-size: 2.4rem; margin-bottom: 4px; }
-  #screen-config .title { font-size: 2.4rem; }
-  #screen-config .subtitle { margin-top: 6px; }
-  #screen-config .config-card { padding: 18px; }
-  #screen-config .step-btn { height: 46px; }
-  #screen-config .stepper input { padding: 8px 0; }
+  #screen-config .brand,
+  #screen-padel-config .brand { margin-bottom: 0; }
+  #screen-config .brand-emoji,
+  #screen-padel-config .brand-emoji { font-size: 2.4rem; margin-bottom: 4px; }
+  #screen-config .title,
+  #screen-padel-config .title { font-size: 2.4rem; }
+  #screen-config .subtitle,
+  #screen-padel-config .subtitle { margin-top: 6px; }
+  #screen-config .config-card,
+  #screen-padel-config .config-card { padding: 18px; }
+  #screen-config .step-btn,
+  #screen-padel-config .step-btn { height: 46px; }
+  #screen-config .stepper input,
+  #screen-padel-config .stepper input { padding: 8px 0; }
 }
 @media (max-height: 600px) {
-  #screen-config .brand-emoji { display: none; }
-  #screen-config .title { font-size: 2rem; }
+  #screen-config .brand-emoji,
+  #screen-padel-config .brand-emoji { display: none; }
+  #screen-config .title,
+  #screen-padel-config .title { font-size: 2rem; }
+  #screen-padel-config .field { gap: 6px; }
+  #screen-padel-config .seg-btn { padding: 8px 6px; }
+  #screen-padel-config .text-input { padding: 9px 10px; }
 }
+
+/* ===================================================================
+   Pádel
+   =================================================================== */
+/* Reloj y Pádel lado a lado en la pantalla principal */
+.extras-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.extras-row .btn { padding-left: 10px; padding-right: 10px; }
+
+/* nombres de los equipos */
+.padel-nombres { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.text-input {
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;          /* 16px: iOS no hace zoom al enfocar */
+  font-weight: 700;
+  padding: 13px 12px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.text-input:focus { outline: none; }
+.text-input.team-a:focus { border-color: var(--team-a); }
+.text-input.team-b:focus { border-color: var(--team-b); }
+
+/* ---------- Tablero ---------- */
+#screen-padel { padding: 0; gap: 0; overflow: hidden; }
+.padel-wrap { position: relative; height: 100%; display: flex; flex-direction: column; }
+
+.padel-half {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.padel-half.team-a { padding-top: env(safe-area-inset-top); background: linear-gradient(180deg, #10291a, var(--card)); }
+.padel-half.team-b { padding-bottom: env(safe-area-inset-bottom); background: linear-gradient(0deg, #0d2433, var(--card)); }
+.padel-half:active { filter: brightness(1.15); }
+.padel-half.is-flash { animation: padel-flash 0.45s var(--ease); }
+@keyframes padel-flash {
+  0%   { filter: brightness(1.8); }
+  100% { filter: brightness(1); }
+}
+
+.padel-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-a .padel-name { color: var(--team-a); }
+.team-b .padel-name { color: var(--team-b); }
+.padel-pts {
+  font-size: clamp(5rem, 30vw, 9rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  min-height: 1em;
+}
+.padel-meta { color: var(--text-soft); font-weight: 600; font-size: 0.95rem; }
+.padel-meta b { color: var(--text); font-size: 1.15rem; }
+
+/* franja del medio: historial de sets + controles */
+.padel-band {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.padel-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.padel-historial {
+  display: flex;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.padel-historial b { color: var(--text); font-weight: 900; }
+.padel-sub {
+  display: flex;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.padel-etiqueta { color: #fbbf24; text-transform: uppercase; letter-spacing: 0.08em; }
+.padel-etiqueta:empty { display: none; }
+.padel-conexion { color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; gap: 4px; }
+.padel-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+.padel-dot.team-a.is-on { background: var(--team-a); }
+.padel-dot.team-b.is-on { background: var(--team-b); }
+.padel-controls { display: flex; gap: 8px; flex: none; }
+.padel-controls .clock-ctrl { width: 46px; height: 46px; font-size: 1.15rem; }
+.padel-controls .clock-ctrl:disabled { opacity: 0.35; }
+
+/* partido terminado */
+.padel-fin {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: rgba(10, 14, 18, 0.92);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.padel-fin-card { text-align: center; padding: 30px 22px; }
+.padel-fin-sets {
+  margin-top: 12px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Links + QR ---------- */
+.padel-qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.padel-qr-card { padding: 14px; display: flex; flex-direction: column; gap: 10px; text-align: center; min-width: 0; }
+.padel-qr-name {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.padel-qr-card.team-a .padel-qr-name { color: var(--team-a); }
+.padel-qr-card.team-b .padel-qr-name { color: var(--team-b); }
+.padel-qr {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 6px;
+  color: #0a0e12;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.padel-qr svg { display: block; width: 100%; height: auto; }
+.padel-share { padding: 12px 8px; font-size: 0.95rem; }
+
+/* ---------- Control (celular que abrió el link) ---------- */
+.padel-remote-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.padel-estado { font-weight: 700; color: var(--text-soft); font-size: 0.95rem; }
+.padel-estado.is-ok { color: var(--accent); }
+.padel-estado.is-bad { color: var(--danger); }
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 6px 2px;
+  cursor: pointer;
+}
+
+.padel-mini { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.padel-mini-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 2.2em 2.6em;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.padel-mini-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-soft); }
+.padel-mini-row.is-mine.team-a .padel-mini-name { color: var(--team-a); }
+.padel-mini-row.is-mine.team-b .padel-mini-name { color: var(--team-b); }
+.padel-mini-sets { color: var(--text-soft); letter-spacing: 0.15em; }
+.padel-mini-games { text-align: center; background: var(--card-2); border-radius: 8px; padding: 2px 0; }
+.padel-mini-games:empty { visibility: hidden; }
+.padel-mini-pts { text-align: right; font-size: 1.4rem; font-weight: 900; }
+.padel-mini .padel-etiqueta { font-size: 0.78rem; font-weight: 700; text-align: center; }
+
+.padel-boton {
+  flex: 1 1 auto;
+  min-height: 180px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--team-a), var(--team-a-2));
+  color: #04130a;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 14px 34px rgba(34, 197, 94, 0.3);
+  transition: transform 0.12s var(--ease), opacity 0.2s;
+}
+.padel-boton.team-b {
+  background: linear-gradient(135deg, var(--team-b), var(--team-b-2));
+  color: #031522;
+  box-shadow: 0 14px 34px rgba(56, 189, 248, 0.3);
+}
+.padel-boton:active { transform: scale(0.97); }
+.padel-boton:disabled { opacity: 0.4; box-shadow: none; }
+.padel-boton.is-sending { opacity: 0.75; }
+.padel-boton.is-flash { animation: padel-flash 0.45s var(--ease); }
+.padel-boton-mas { font-size: clamp(4rem, 22vw, 6rem); font-weight: 900; line-height: 1; }
+.padel-boton-txt { font-size: 1.1rem; font-weight: 600; }
+#padel-remote-deshacer:disabled { opacity: 0.4; }
 
 /* respeta a quienes prefieren menos animaciones */
 @media (prefers-reduced-motion: reduce) {
