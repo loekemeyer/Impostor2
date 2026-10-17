@@ -668,8 +668,8 @@ body {
 /* ===================================================================
    Pádel
    =================================================================== */
-/* Reloj y Pádel lado a lado en la pantalla principal */
-.extras-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Reloj, Pádel y Truco lado a lado en la pantalla principal */
+.extras-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .extras-row .btn { padding-left: 10px; padding-right: 10px; }
 
 /* nombres de los equipos */
@@ -1011,3 +1011,110 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ===================================================================
+   Truco
+   =================================================================== */
+.truco-metas { grid-template-columns: 1fr 1fr; }
+.truco-metas .seg-btn { font-size: 1.3rem; font-weight: 900; }
+
+#screen-truco { padding: 0; gap: 0; overflow: hidden; }
+.truco-wrap { position: relative; height: 100%; display: flex; flex-direction: column; }
+
+.truco-band {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(env(safe-area-inset-top), 10px) 14px 10px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+.truco-meta { font-size: 1.05rem; font-weight: 800; color: var(--text-soft); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.truco-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
+.truco-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.truco-col.team-a { border-right: 1px solid var(--border); background: linear-gradient(180deg, #10291a, var(--card)); }
+.truco-col.team-b { background: linear-gradient(180deg, #0d2433, var(--card)); }
+
+.truco-tap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 8px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  overflow: hidden;
+}
+.truco-tap:active { filter: brightness(1.15); }
+.truco-tap.is-flash { animation: padel-flash 0.45s var(--ease); }
+
+.truco-name {
+  max-width: 100%;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-a .truco-name { color: var(--team-a); }
+.team-b .truco-name { color: var(--team-b); }
+.truco-pts {
+  font-size: clamp(3.4rem, 18vw, 5rem);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.truco-etapa { min-height: 1.1em; font-size: 0.8rem; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* fósforos: un cuadradito por cada 5 puntos */
+.truco-fosforos {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 4px;
+  margin-top: 6px;
+}
+.truco-cuadro { width: auto; height: min(64px, 7.5dvh); flex: none; }
+.truco-cuadro path { stroke-width: 4; stroke-linecap: round; fill: none; }
+.truco-cuadro path.off { stroke: rgba(255, 255, 255, 0.07); }
+.team-a .truco-cuadro path.on { stroke: var(--team-a); }
+.team-b .truco-cuadro path.on { stroke: var(--team-b); }
+.truco-raya {
+  align-self: stretch;
+  border-top: 2px dashed var(--border);
+  padding-top: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.truco-menos {
+  flex: none;
+  margin: 0 12px max(env(safe-area-inset-bottom), 12px);
+  height: 48px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 1.6rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.truco-menos:active { transform: scale(0.96); }
+.truco-menos:disabled { opacity: 0.35; }

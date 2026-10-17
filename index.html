@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>El Impostor 🕵️‍♂️ · Fútbol, Mixto o Número</title>
-  <link rel="stylesheet" href="styles.css?v=1.11.0" />
+  <link rel="stylesheet" href="styles.css?v=1.12.0" />
 </head>
 <body>
   <!-- Fondo decorativo sutil de fútbol (líneas de cancha + pelotas) -->
@@ -84,6 +84,7 @@
       <div class="extras-row">
         <button class="btn btn-ghost" id="btn-open-clock">♟️ Reloj</button>
         <button class="btn btn-ghost" id="btn-open-padel">🎾 Pádel</button>
+        <button class="btn btn-ghost" id="btn-open-truco">🃏 Truco</button>
       </div>
 
       <p class="version" id="app-version">v0.0.0</p>
@@ -410,10 +411,86 @@
       <button class="btn btn-ghost" id="padel-remote-deshacer" disabled>↺ Deshacer mi punto</button>
     </section>
 
+    <!-- ============ TRUCO · CONFIGURACIÓN ============ -->
+    <section class="screen" id="screen-truco-config" aria-label="Configurar truco">
+      <div class="brand">
+        <div class="brand-emoji">🃏</div>
+        <h1 class="title">Truco</h1>
+        <p class="subtitle">Contador</p>
+      </div>
+
+      <div class="card config-card">
+        <div class="field">
+          <span class="field-label">Se juega a</span>
+          <div class="segmented truco-metas" role="group" aria-label="Puntos para ganar">
+            <button type="button" class="seg-btn" data-meta="15">15</button>
+            <button type="button" class="seg-btn" data-meta="30">30</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Equipos</span>
+          <div class="padel-nombres">
+            <input type="text" id="truco-nombre-a" class="text-input team-a" maxlength="14" placeholder="Nosotros" autocomplete="off" />
+            <input type="text" id="truco-nombre-b" class="text-input team-b" maxlength="14" placeholder="Ellos" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-truco-seguir" hidden>Seguir partido</button>
+      <button class="btn btn-primary" id="btn-truco-empezar">Empezar</button>
+      <button type="button" class="link-btn" id="btn-truco-volver">Volver</button>
+    </section>
+
+    <!-- ============ TRUCO · TABLERO (tocar una columna = +1 para ese equipo) ============ -->
+    <section class="screen" id="screen-truco" aria-label="Tablero de truco">
+      <div class="truco-wrap">
+        <div class="truco-band">
+          <span class="truco-meta" id="truco-meta">A 30</span>
+          <div class="padel-controls">
+            <button type="button" class="clock-ctrl" id="truco-deshacer" aria-label="Deshacer">↺</button>
+            <button type="button" class="clock-ctrl" id="truco-salir" aria-label="Salir">✕</button>
+          </div>
+        </div>
+
+        <div class="truco-cols">
+          <div class="truco-col team-a">
+            <button type="button" class="truco-tap" id="truco-tap-a">
+              <span class="truco-name" id="truco-name-a">Nosotros</span>
+              <span class="truco-pts" id="truco-pts-a">0</span>
+              <span class="truco-etapa" id="truco-etapa-a"></span>
+              <span class="truco-fosforos" id="truco-fosforos-a"></span>
+            </button>
+            <button type="button" class="truco-menos" id="truco-menos-a" aria-label="Restar un punto">−</button>
+          </div>
+          <div class="truco-col team-b">
+            <button type="button" class="truco-tap" id="truco-tap-b">
+              <span class="truco-name" id="truco-name-b">Ellos</span>
+              <span class="truco-pts" id="truco-pts-b">0</span>
+              <span class="truco-etapa" id="truco-etapa-b"></span>
+              <span class="truco-fosforos" id="truco-fosforos-b"></span>
+            </button>
+            <button type="button" class="truco-menos" id="truco-menos-b" aria-label="Restar un punto">−</button>
+          </div>
+        </div>
+
+        <div class="padel-fin" id="truco-fin" hidden>
+          <div class="card padel-fin-card">
+            <p class="final-emoji">🏆🃏</p>
+            <h2 class="final-title" id="truco-fin-titulo">¡Ganó Nosotros!</h2>
+            <p class="padel-fin-sets" id="truco-fin-total"></p>
+          </div>
+          <button class="btn btn-primary" id="btn-truco-revancha">Revancha</button>
+          <button type="button" class="link-btn" id="truco-fin-deshacer">↺ Deshacer</button>
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <script src="script.js?v=1.11.0" defer></script>
-  <script src="padel-reglas.js?v=1.11.0" defer></script>
-  <script src="padel.js?v=1.11.0" defer></script>
+  <script src="script.js?v=1.12.0" defer></script>
+  <script src="padel-reglas.js?v=1.12.0" defer></script>
+  <script src="padel.js?v=1.12.0" defer></script>
+  <script src="truco.js?v=1.12.0" defer></script>
 </body>
 </html>
