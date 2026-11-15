@@ -305,3 +305,17 @@ select n.nspname, c.relname
    and has_table_privilege('anon', c.oid, 'SELECT')
    and n.nspname not in ('pg_catalog','information_schema','pg_toast');
 ```
+
+## ⚠ TÍTULOS DE TABLA: nunca más anchos que el dato (vale SIEMPRE, en todo formato)
+
+Pedido del dueño, 15/11/2026: los títulos de una tabla nunca son más anchos que el contenido. Vale para toda tabla, en el
+chat, Excel, PDF, HTML, SVG, imagen o pantalla de una app.
+
+1. **El ancho de cada columna lo pone su dato más largo, nunca el título.**
+2. Si el título es más ancho que el dato, **se parte en 2 o 3 renglones**: `Precio<br>lista`, `Uni<br>x caja`, `Dto<br>vol`,
+   `Neto<br>c/IVA`. Si con 3 renglones no alcanza, se abrevia (`Cód.`, `Cant.`, `Lím. crédito`).
+3. **Según el formato:** Excel → `wrap_text` en la fila de títulos y el ancho de la columna según el dato (openpyxl:
+   `Alignment(wrap_text=True)` y `column_dimensions[...].width`). HTML o PDF → `<br>` en el `<th>`, y `white-space: nowrap`
+   **sólo en las celdas de datos, nunca en los títulos**. Markdown → `<br>` dentro del título, o abreviar.
+4. **Antes de entregar, revisar columna por columna**: si alguna quedó más ancha por su título que por su dato, está mal y
+   se corrige antes de mandarla.
