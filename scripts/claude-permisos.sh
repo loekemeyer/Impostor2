@@ -84,6 +84,17 @@ SACAR_ASK = ["Bash(git push:*)", "Bash(git push *)",
 sacados = [x for x in ask if x in SACAR_ASK]
 if sacados:
     perms["ask"] = [x for x in ask if x not in SACAR_ASK]
+# Lo peligroso sigue frenado tambien en la PC (Thomas, 20/11): el allow de
+# "git push *" incluiria el push forzado. Mismas 11 deny que el setup script.
+DENY = [
+    "Bash(rm -rf:*)", "Bash(rm -fr:*)", "Bash(sudo rm:*)",
+    "Bash(git push --force:*)", "Bash(git push -f:*)",
+    "Bash(git push --force-with-lease:*)",
+    "Bash(git reset --hard:*)", "Bash(psql:*)", "Bash(supabase db:*)",
+    "Read(./.env)", "Read(./.env.*)",
+]
+deny = perms.setdefault("deny", [])
+deny.extend(x for x in DENY if x not in deny)
 escribir(us, d)
 
 # --- 2) trust del workspace (habilita el .claude/settings.json del repo) -----
@@ -94,7 +105,7 @@ ya = p.get("hasTrustDialogAccepted") is True
 p["hasTrustDialogAccepted"] = True
 escribir(cj, d)
 
-print("permisos usuario: +%d nuevos (%d en total) | git push sin preguntar%s | trust %s: %s"
-      % (len(nuevos), len(allow), " (sacado de ask)" if sacados else "",
+print("permisos usuario: +%d nuevos (%d en total) | %d deny | git push sin preguntar%s | trust %s: %s"
+      % (len(nuevos), len(allow), len(deny), " (sacado de ask)" if sacados else "",
          "ya estaba" if ya else "marcado", proj))
 ' "$HOME_DIR" "$DIR"
