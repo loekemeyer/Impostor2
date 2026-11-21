@@ -669,7 +669,8 @@ body {
    Pádel
    =================================================================== */
 /* Reloj, Pádel y Truco lado a lado en la pantalla principal */
-.extras-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.extras-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.extras-row a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
 .extras-row .btn { padding-left: 10px; padding-right: 10px; }
 
 /* nombres de los equipos */
